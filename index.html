@@ -183,8 +183,15 @@
   .about-body p{margin-bottom:16px;}
 
   /* FOOTER */
-  footer{border-top:1px solid var(--border);padding:40px 0 60px;}
-  .footer-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;}
+  footer{border-top:1px solid var(--border);padding:40px 24px 60px;}
+  .footer-row{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:16px;
+    text-align:center;
+  }
   .contact-links{display:flex;gap:20px;font-family:'IBM Plex Mono',monospace;font-size:0.8rem;}
   .contact-links a{color:var(--text-dim);}
   .contact-links a:hover{color:var(--copper);}
@@ -360,24 +367,18 @@
     </div>
   </div>
 </section>
+
+<footer>
+  <div class="footer-row">
+    <div class="contact-links">
+      <a href="mailto:Terrence.nails@outlook.com">email</a>
+      <a href="https://github.com/terrencenails">github</a>
+      <a href="https://www.linkedin.com/in/terrencenails">linkedin</a>
+      <a href="/resume.pdf">resume</a>
     </div>
+    <div class="footer-note">last updated 2026-07 · built on github pages</div>
   </div>
-</section>
-
- <footer>
-      <div class="footer-row">
-        <div class="contact-links">
-          <a href="mailto:Terrence.nails@outlook.com">email</a>
-          <a href="https://github.com/terrencenails">github</a>
-          <a href="https://www.linkedin.com/in/terrencenails">linkedin</a>
-          <a href="/resume.pdf">resume</a>
-        </div>
-        <div class="footer-note">last updated 2026-07 · built on github pages</div>
-      </div>
-    </footer>
-
-  </body>
-</html>
+</footer>
 
 </body>
 </html>
