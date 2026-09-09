@@ -99,7 +99,7 @@
   }
   h1 .accent{color:var(--copper);}
   .hero-sub{
-    font-size:1.05rem;color:var(--text-dim);max-width:560px;margin-bottom:32px;
+    font-size:1.05rem;color:var(--text-dim);max-width:640px;margin-bottom:32px;
   }
   .hero-meta{
     display:flex;flex-wrap:wrap;gap:10px;
@@ -122,7 +122,7 @@
     font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1.5rem;
   }
 
-  /* PATCH PANEL / LAB GRID */
+  /* PATCH PANEL / PROJECT GRID */
   .panel-rack{
     border:1px solid var(--border);
     background:var(--panel);
@@ -216,9 +216,8 @@
   <div class="wrap">
     <div class="nav-brand">terrencenails<span class="dot">.</span>lab</div>
     <div class="nav-links">
-      <a href="#labs"><span class="idx">01</span>Labs</a>
+      <a href="#projects"><span class="idx">01</span>Projects</a>
       <a href="#certs"><span class="idx">02</span>Certifications</a>
-      <a href="#about"><span class="idx">03</span>About</a>
     </div>
   </div>
 </nav>
@@ -230,7 +229,7 @@
       <span class="prompt">terrencenails@lab:~$</span> <span class="cmd">whoami</span><span class="caret"></span>
     </div>
     <h1>Enterprise &amp; security architect,<br>building it in the <span class="accent">lab</span> first.</h1>
-    <p class="hero-sub">Hands-on write-ups from home-lab and training environments — secure network design, cloud architecture, Linux systems, and enterprise architecture patterns behind CCNP SDSI and CISSP. Every entry below is a real build, not a checklist.</p>
+    <p class="hero-sub">I'm Terrence Nails, a Senior Systems Engineer at TBM Technology Consulting with a B.S. in Computer Networks &amp; Cybersecurity from the University of Maryland, currently pursuing an M.S. in Information Systems Engineering at Johns Hopkins. My day-to-day is hands-on and highly technical, so I built this lab to document my own journey — the designs, the failures, and the processes behind them, written down as I go rather than after the fact. Outside the lab, you'll find me training Muay Thai, at the gym, traveling, or barbecuing.</p>
     <div class="hero-meta">
       <div class="badge">Active <b>Secret</b> clearance</div>
       <div class="badge">Pursuing <b>CCNP SDSI</b> &amp; <b>CISSP</b></div>
@@ -239,47 +238,47 @@
   </div>
 </header>
 
-<section class="section" id="labs">
+<section class="section" id="projects">
   <div class="wrap">
-    <div class="section-head"><span class="tag">// 01</span><h2>Lab Log</h2></div>
+    <div class="section-head"><span class="tag">// 01</span><h2>Projects</h2></div>
     <div class="panel-rack">
 
       <div class="port">
         <div class="port-id">Gi0/1<br><span class="up">● up</span></div>
         <div class="port-body">
-          <h3>Zero Trust Segmentation Design for a Mid-Size Enterprise</h3>
-          <p>Designed a microsegmentation model for a simulated enterprise — trust zones, VLAN/ACL enforcement boundaries, and policy mapped to a least-privilege access model rather than flat perimeter trust.</p>
-          <div class="port-tags"><span>Zero Trust</span><span>Segmentation</span><span>Enterprise Architecture</span></div>
+          <h3>AWS</h3>
+          <p>IAM least-privilege enforcement, multi-account landing zone architecture, and cloud security posture reviews — provisioning identity and access controls, then testing the boundary under real conditions instead of trusting the policy on paper.</p>
+          <div class="port-tags"><span>IAM</span><span>Landing Zone</span><span>CSPM</span></div>
         </div>
-        <a class="port-link" href="#">view write-up →</a>
+        <a class="port-link" href="labs/aws/index.html">view projects →</a>
       </div>
 
       <div class="port">
-        <div class="port-id">Gi0/2<br><span class="up">● up</span></div>
+        <div class="port-id">Gi0/2<br><span class="text-faint">○ planned</span></div>
         <div class="port-body">
-          <h3>Secure WAN Edge: SD-WAN Overlay with Centralized Policy</h3>
-          <p>Built a secure infrastructure lab covering SD-WAN overlay design, encrypted transport between sites, and centralized policy control — core practice for the CCNP SDSI concentration.</p>
-          <div class="port-tags"><span>CCNP SDSI</span><span>SD-WAN</span><span>Secure Infrastructure</span></div>
+          <h3>Azure</h3>
+          <p>Azure-based architecture and security labs, mirroring the AWS work in a second cloud provider.</p>
+          <div class="port-tags"><span>Azure</span></div>
         </div>
-        <a class="port-link" href="#">view write-up →</a>
+        <a class="port-link" href="#">in progress</a>
       </div>
 
       <div class="port">
-        <div class="port-id">Gi0/3<br><span class="up">● up</span></div>
+        <div class="port-id">Gi0/3<br><span class="text-faint">○ planned</span></div>
         <div class="port-body">
-          <h3>Enterprise IAM &amp; Access Control Architecture</h3>
-          <p>Mapped an identity and access management architecture for a multi-department org — RBAC model, SSO/federation flow, and privileged access controls, aligned to CISSP's IAM domain.</p>
-          <div class="port-tags"><span>CISSP · IAM</span><span>RBAC</span><span>SSO/Federation</span></div>
+          <h3>DevSecOps</h3>
+          <p>Linux server hardening and CIS Benchmark baselines, built as a repeatable script rather than one-off manual configuration, so the same baseline applies cleanly to new hosts.</p>
+          <div class="port-tags"><span>Linux</span><span>CIS Benchmarks</span><span>Bash</span></div>
         </div>
-        <a class="port-link" href="#">view write-up →</a>
+        <a class="port-link" href="#">in progress</a>
       </div>
 
       <div class="port">
         <div class="port-id">Gi0/4<br><span class="up">● up</span></div>
         <div class="port-body">
-          <h3>Security Architecture Framework Mapping (SABSA / NIST CSF)</h3>
-          <p>Took a fictional enterprise's business requirements and mapped them through a security architecture framework — business layer down to component/technology layer — showing how controls trace back to risk.</p>
-          <div class="port-tags"><span>Enterprise Security Architecture</span><span>SABSA</span><span>NIST CSF</span></div>
+          <h3>Enterprise Architecture</h3>
+          <p>Security architecture framework mapping — tracing a fictional enterprise's requirements from the business layer down through technology-level controls using SABSA and NIST CSF.</p>
+          <div class="port-tags"><span>SABSA</span><span>NIST CSF</span></div>
         </div>
         <a class="port-link" href="#">view write-up →</a>
       </div>
@@ -287,29 +286,19 @@
       <div class="port">
         <div class="port-id">Gi0/5<br><span class="up">● up</span></div>
         <div class="port-body">
-          <h3>AWS Multi-Account Landing Zone Architecture</h3>
-          <p>Designed a multi-account AWS landing zone — org structure, SCUs for guardrails, centralized logging account, and network segmentation across VPCs — following AWS Well-Architected security pillar guidance.</p>
-          <div class="port-tags"><span>Cloud Architecture</span><span>AWS</span><span>IAM/SCPs</span></div>
+          <h3>Network Security</h3>
+          <p>Zero trust segmentation design and secure WAN edge builds — trust zones, policy enforcement boundaries, and SD-WAN overlay architecture for enterprise environments, tied to the CCNP SDSI concentration.</p>
+          <div class="port-tags"><span>Zero Trust</span><span>SD-WAN</span><span>CCNP SDSI</span></div>
         </div>
         <a class="port-link" href="#">view write-up →</a>
       </div>
 
       <div class="port">
-        <div class="port-id">Gi0/6<br><span class="up">● up</span></div>
+        <div class="port-id">Gi0/6<br><span class="text-faint">○ planned</span></div>
         <div class="port-body">
-          <h3>Linux Server Hardening &amp; CIS Benchmark Baseline</h3>
-          <p>Built and hardened a Linux server baseline against CIS Benchmarks — SSH hardening, filesystem permissions, auditd logging, and a repeatable script to apply the baseline to new hosts.</p>
-          <div class="port-tags"><span>Linux</span><span>CIS Benchmarks</span><span>Bash</span></div>
-        </div>
-        <a class="port-link" href="#">view write-up →</a>
-      </div>
-
-      <div class="port">
-        <div class="port-id">Gi0/7<br><span class="text-faint">○ planned</span></div>
-        <div class="port-body">
-          <h3>Next: Cloud Security Posture Review</h3>
-          <p>Planned lab — run a cloud security posture assessment against the landing zone above, prioritize misconfigurations, and document remediation aligned to CySA+/SecurityX practices.</p>
-          <div class="port-tags"><span>CSPM</span><span>Cloud Security</span></div>
+          <h3>SOC</h3>
+          <p>Security operations projects — log aggregation, alert triage, and detection engineering for common attack patterns.</p>
+          <div class="port-tags"><span>SIEM</span><span>Detection</span></div>
         </div>
         <a class="port-link" href="#">in progress</a>
       </div>
@@ -346,7 +335,7 @@
         <div>05/07/2029</div>
       </div>
       <div class="cert-row">
-        <div>CCNP Security — SDSI concentration</div>
+        <div>CCNP Enterprise — SDSI concentration</div>
         <div class="cert-status progress"><span class="dot"></span>In progress</div>
         <div>2026</div>
       </div>
@@ -356,14 +345,6 @@
         <div>2026</div>
       </div>
     </div>
-  </div>
-</section>
-
-<section class="section" id="about">
-  <div class="wrap">
-    <div class="section-head"><span class="tag">// 03</span><h2>About Me</h2></div>
-    <div class="about-body">
-<p>I'm Terrence Nails, a Senior Systems Engineer at TBM Technology Consulting with a B.S. in Computer Networks &amp; Cybersecurity from the University of Maryland, currently pursuing an Master's in Engineering Management with a focus in Technical Leadership at Johns Hopkins University. My day-to-day is hands-on and highly technical, so I built this lab to document my own journey — the designs, the failures, and the processes behind them, written down as I go rather than after the fact. Outside the lab, you'll find me training Muay Thai, at the gym, traveling, or barbecuing.</p>    </div>
   </div>
 </section>
 
