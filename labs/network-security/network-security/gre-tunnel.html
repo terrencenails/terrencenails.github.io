@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Site-to-Site GRE Tunnel — Project Write-Up</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0a0f1a; --panel:#121a29; --panel-2:#0e1521; --border:#213048;
+    --copper:#d68a3c; --copper-dim:#8a5a26; --green:#6fae7f; --red:#c1554a;
+    --text:#e8ecf1; --text-dim:#8b96a8; --text-faint:#4d5b70;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--ink);color:var(--text);font-family:'IBM Plex Sans',sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;}
+  body::before{
+    content:'';position:fixed;inset:0;
+    background-image:linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size:48px 48px;pointer-events:none;z-index:0;
+  }
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:760px;margin:0 auto;padding:0 24px;position:relative;z-index:1;}
+  nav{position:sticky;top:0;z-index:10;background:rgba(10,15,26,0.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);}
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;max-width:760px;}
+  .back-link{font-family:'IBM Plex Mono',monospace;font-size:0.8rem;color:var(--text-dim);}
+  .back-link:hover{color:var(--copper);}
+  .nav-brand{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.95rem;}
+  .nav-brand .dot{color:var(--copper);}
+
+  header{padding:56px 0 40px;border-bottom:1px solid var(--border);}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--copper);letter-spacing:0.08em;margin-bottom:14px;}
+  h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(1.7rem,4.5vw,2.3rem);line-height:1.15;margin-bottom:16px;}
+  .lead{color:var(--text-dim);font-size:1.02rem;max-width:620px;margin-bottom:24px;}
+  .meta-row{display:flex;flex-wrap:wrap;gap:8px;}
+  .badge{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;border:1px solid var(--border);color:var(--text-dim);padding:5px 10px;border-radius:2px;background:var(--panel);}
+
+  main{padding:48px 0 80px;}
+  section{margin-bottom:56px;}
+  .section-tag{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--copper);letter-spacing:0.08em;margin-bottom:10px;display:block;}
+  h2{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1.25rem;margin-bottom:14px;}
+  p{color:var(--text-dim);margin-bottom:14px;max-width:640px;}
+  p strong{color:var(--text);font-weight:500;}
+
+  .topology{
+    border:1px solid var(--border);background:var(--panel);border-radius:3px;
+    padding:20px;margin-bottom:20px;font-family:'IBM Plex Mono',monospace;font-size:0.82rem;color:var(--text-dim);
+    overflow-x:auto;white-space:pre;
+  }
+  .topology b{color:var(--copper);}
+
+  .step{
+    border:1px solid var(--border);background:var(--panel);border-radius:3px;
+    padding:20px 20px 0;margin-bottom:20px;overflow:hidden;
+  }
+  .step-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .step-num{font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--copper);border:1px solid var(--copper-dim);padding:2px 8px;border-radius:2px;}
+  .step h3{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:600;}
+  .step p{margin-bottom:14px;font-size:0.9rem;}
+  .step img{width:100%;border-radius:2px 2px 0 0;border-top:1px solid var(--border);display:block;}
+
+  .status-tag{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;padding:2px 8px;border-radius:2px;border:1px solid;display:inline-block;margin-bottom:10px;}
+  .status-tag.ok{color:var(--green);border-color:rgba(111,174,127,0.4);background:rgba(111,174,127,0.06);}
+  .status-tag.denied{color:var(--red);border-color:rgba(193,85,74,0.4);background:rgba(193,85,74,0.06);}
+
+  .callout{
+    border-left:2px solid var(--copper);background:var(--panel-2);
+    padding:16px 20px;border-radius:0 3px 3px 0;margin-bottom:20px;
+  }
+  .callout p{margin-bottom:0;color:var(--text);font-size:0.92rem;}
+
+  ul.takeaways{list-style:none;}
+  ul.takeaways li{
+    color:var(--text-dim);margin-bottom:12px;padding-left:20px;position:relative;font-size:0.94rem;max-width:620px;
+  }
+  ul.takeaways li::before{content:'—';position:absolute;left:0;color:var(--copper);}
+
+  footer{border-top:1px solid var(--border);padding:32px 0 60px;text-align:center;}
+  footer a{font-family:'IBM Plex Mono',monospace;font-size:0.8rem;color:var(--text-dim);}
+  footer a:hover{color:var(--copper);}
+
+  @media (max-width:640px){
+    .step{padding:16px 16px 0;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="back-link" href="index.html">← back to Network Security projects</a>
+    <div class="nav-brand">terrencenails<span class="dot">.</span>portfolio</div>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <span class="eyebrow">// NETWORK SECURITY PROJECTS</span>
+    <h1>Site-to-Site GRE Tunnel: Connecting Two LANs Over a WAN</h1>
+    <p class="lead">Built a GRE tunnel between two routers across a simulated WAN, then added static routing so each router's LAN could actually reach the other — testing connectivity after every single step instead of assuming the config was right.</p>
+    <div class="meta-row">
+      <div class="badge">GRE</div>
+      <div class="badge">Static Routing</div>
+      <div class="badge">WAN</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+
+    <section>
+      <span class="section-tag">// OBJECTIVE</span>
+      <h2>Why this project</h2>
+      <p>A GRE tunnel encapsulates traffic between two routers so their private networks can reach each other across a transit network that wouldn't normally route between them. It's a foundational building block behind a lot of site-to-site connectivity — but it's also easy to configure halfway and assume it's working. This project deliberately tests connectivity <strong>before</strong> the tunnel exists, <strong>after</strong> the tunnel interface is created but not bound, <strong>after</strong> it's bound to real endpoints, and <strong>after</strong> routing is added — so each failure can be traced to the exact piece that was still missing.</p>
+    </section>
+
+    <section>
+      <span class="section-tag">// TOPOLOGY</span>
+      <h2>Setup</h2>
+      <div class="topology"><b>Router1</b>  LAN 10.10.10.0/24 (Fa1/0)  |  WAN-facing 198.51.100.1 (Se0/0)  |  Loopback 203.0.113.1
+<b>Router3</b>  LAN 10.10.30.0/24 (Fa1/0)  |  WAN-facing 198.51.100.6 (Se0/0)
+
+GRE Tunnel0:  Router1 192.168.0.1/30  ↔  Router3 192.168.0.2/30</div>
+      <p>Two routers, each fronting a separate LAN, connected only by a WAN-facing serial link. Nothing about that WAN link lets 10.10.10.0/24 talk to 10.10.30.0/24 on its own — that's what the tunnel and the routing added on top of it are for.</p>
+    </section>
+
+    <section>
+      <span class="section-tag">// BASELINE</span>
+      <h2>Confirming the LANs can't reach each other yet</h2>
+
+      <div class="step">
+        <span class="status-tag denied" style="margin-top:20px;">✕ UNREACHABLE</span>
+        <div class="step-head"><span class="step-num">01</span><h3>Ping across the WAN fails</h3></div>
+        <p>From a host on Router1's LAN, pinging a host on Router3's LAN (10.10.30.100) returns "Destination host unreachable" — the expected starting point before any tunnel or routing exists.</p>
+        <img src="assets/gre-tunnel/01-ping-unreachable-before.png" alt="Ping to 10.10.30.100 failing before any configuration">
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// BUILD</span>
+      <h2>Creating the tunnel interfaces</h2>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">02</span><h3>Create Tunnel0 on Router1</h3></div>
+        <p>Created the tunnel interface — line protocol immediately goes down, which is correct at this point: the interface exists, but it has no source or destination bound to it yet.</p>
+        <img src="assets/gre-tunnel/02-r1-tunnel-created.png" alt="Router1 creating tunnel interface 0, line protocol down">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">03</span><h3>Create Tunnel0 on Router3</h3></div>
+        <p>Same on Router3 — tunnel interface exists, line protocol down, mirroring Router1's state exactly.</p>
+        <img src="assets/gre-tunnel/03-r3-tunnel-created.png" alt="Router3 creating tunnel interface 0, line protocol down">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">04</span><h3>Assign Router1's tunnel IP</h3></div>
+        <p>Gave the tunnel interface an address in a dedicated /30 — <code>192.168.0.1</code> — separate from either LAN or the WAN link.</p>
+        <img src="assets/gre-tunnel/04-r1-tunnel-ip.png" alt="Router1 assigning IP address 192.168.0.1/30 to tunnel interface">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">05</span><h3>Assign Router3's tunnel IP</h3></div>
+        <p>The other half of the same /30 on Router3 — <code>192.168.0.2</code>.</p>
+        <img src="assets/gre-tunnel/05-r3-tunnel-ip.png" alt="Router3 assigning IP address 192.168.0.2/30 to tunnel interface">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">06</span><h3>Check interface status</h3></div>
+        <p>Router1's interface summary shows exactly what's expected mid-build: the WAN serial link and LAN interfaces are up, unused serial ports sit administratively down, and Tunnel0 has an IP but its protocol is still down — addressed, but not yet functional.</p>
+        <img src="assets/gre-tunnel/06-r1-show-ip-int-bri.png" alt="show ip int bri on Router1 showing tunnel up but protocol down">
+      </div>
+
+      <div class="step">
+        <span class="status-tag denied" style="margin-top:20px;">✕ UNREACHABLE</span>
+        <div class="step-head"><span class="step-num">07</span><h3>Confirm the tunnel still isn't functional</h3></div>
+        <p>Pinging the far tunnel endpoint (192.168.0.2) still fails — proof that assigning an IP address to a tunnel interface isn't enough by itself. It still needs to know where the tunnel actually goes.</p>
+        <img src="assets/gre-tunnel/07-ping-tunnel-ip-fails.png" alt="Ping to tunnel IP 192.168.0.2 failing before source/destination configured">
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// BUILD</span>
+      <h2>Binding the tunnel to the WAN endpoints</h2>
+
+      <div class="step">
+        <span class="status-tag ok" style="margin-top:20px;">✓ UP</span>
+        <div class="step-head"><span class="step-num">08</span><h3>Set Router1's tunnel source and destination</h3></div>
+        <p>Pointed the tunnel at the real WAN addresses — source 198.51.100.1, destination 198.51.100.6. The line protocol flips to up immediately.</p>
+        <img src="assets/gre-tunnel/08-r1-tunnel-source-dest.png" alt="Router1 setting tunnel source and destination, line protocol up">
+      </div>
+
+      <div class="step">
+        <span class="status-tag ok" style="margin-top:20px;">✓ UP</span>
+        <div class="step-head"><span class="step-num">09</span><h3>Set Router3's tunnel source and destination</h3></div>
+        <p>The mirrored configuration on Router3 — source 198.51.100.6, destination 198.51.100.1. Same result: line protocol up.</p>
+        <img src="assets/gre-tunnel/09-r3-tunnel-source-dest.png" alt="Router3 setting tunnel source and destination, line protocol up">
+      </div>
+
+      <div class="step">
+        <span class="status-tag ok" style="margin-top:20px;">✓ REACHABLE</span>
+        <div class="step-head"><span class="step-num">10</span><h3>Tunnel connectivity confirmed</h3></div>
+        <p>Router3 successfully pings Router1's tunnel address (192.168.0.1) — 100% success. The GRE tunnel itself is now fully functional between the two routers.</p>
+        <img src="assets/gre-tunnel/10-r3-ping-r1-tunnel-success.png" alt="Router3 successfully pinging 192.168.0.1 over the tunnel">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">11</span><h3>Tunnel shows in the routing table</h3></div>
+        <p>Router3's routing table now lists the 192.168.0.0/30 tunnel network as directly connected — the tunnel is a real, routable interface at this point, not just an up/up status.</p>
+        <img src="assets/gre-tunnel/11-r3-show-ip-route-tunnel.png" alt="Router3 routing table showing tunnel network as directly connected">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">12</span><h3>Full interface detail</h3></div>
+        <p><code>show interfaces tunnel 0</code> confirms the complete picture: up/up, correct source and destination, GRE/IP encapsulation — everything matching what was configured.</p>
+        <img src="assets/gre-tunnel/12-r3-show-interfaces-tunnel.png" alt="Detailed tunnel interface output confirming GRE/IP encapsulation and endpoints">
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// TEST</span>
+      <h2>Discovering the tunnel alone isn't enough</h2>
+
+      <div class="step">
+        <span class="status-tag denied" style="margin-top:20px;">✕ UNREACHABLE</span>
+        <div class="step-head"><span class="step-num">13</span><h3>The original ping still fails</h3></div>
+        <p>Even with the tunnel fully up between the routers, the original LAN-to-LAN ping (10.10.30.100) still fails. The tunnel connects the <em>routers</em> — it doesn't automatically tell either router how to reach the <em>other's LAN</em> through it.</p>
+        <img src="assets/gre-tunnel/13-ping-lan-still-fails.png" alt="Ping to remote LAN still failing despite tunnel being up">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">14</span><h3>Confirm no dynamic routing is running</h3></div>
+        <p><code>show ip protocols</code> on Router3 returns nothing — no OSPF, no EIGRP. This build intentionally uses static routes rather than a dynamic protocol, so the routing has to be added by hand.</p>
+        <img src="assets/gre-tunnel/14-r3-show-ip-protocols-empty.png" alt="show ip protocols returning empty, confirming no dynamic routing protocol">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">15</span><h3>Add the static route on Router3</h3></div>
+        <p>Pointed traffic for Router1's LAN (10.10.10.0/24) at the tunnel's far address (192.168.0.1) — telling Router3 exactly how to reach the other side.</p>
+        <img src="assets/gre-tunnel/15-r3-static-route.png" alt="Router3 static route to 10.10.10.0/24 via tunnel">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">16</span><h3>Add the mirrored route on Router1</h3></div>
+        <p>The reverse route on Router1, pointing traffic for Router3's LAN (10.10.30.0/24) at 192.168.0.2 — the tunnel now has routing configured in both directions.</p>
+        <img src="assets/gre-tunnel/16-r1-static-route.png" alt="Router1 static route to 10.10.30.0/24 via tunnel">
+      </div>
+
+      <div class="step">
+        <span class="status-tag ok" style="margin-top:20px;">✓ REACHABLE</span>
+        <div class="step-head"><span class="step-num">17</span><h3>LAN-to-LAN connectivity succeeds</h3></div>
+        <p>The exact same ping that failed at the very start of this project now succeeds — 100% success rate, both LANs fully reachable across the GRE tunnel.</p>
+        <img src="assets/gre-tunnel/17-ping-lan-success.png" alt="Successful ping to remote LAN after static routes added">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">18</span><h3>Final routing table</h3></div>
+        <p>Router3's final routing table shows the complete picture: the static route to 10.10.10.0/24 via the tunnel, and the tunnel network itself as a connected interface — the full path traffic now takes.</p>
+        <img src="assets/gre-tunnel/18-r3-show-ip-route-final.png" alt="Final routing table on Router3 showing static route and tunnel network">
+      </div>
+
+      <div class="callout">
+        <p><strong>Result:</strong> full LAN-to-LAN reachability only came together once three separate things were true — the tunnel interface existed, it was bound to real WAN endpoints, and static routes actually pointed each LAN's traffic into it. Testing after every single step, even the ones that "should" work, made it possible to isolate exactly which piece was still missing instead of debugging blind at the end.</p>
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// TAKEAWAYS</span>
+      <h2>What this demonstrates</h2>
+      <ul class="takeaways">
+        <li>An interface showing "up" doesn't mean traffic can actually get where it's going — a tunnel needs both a working data path <em>and</em> routing that points into it before it's genuinely useful.</li>
+        <li>Testing incrementally, after every single command, catches exactly where a chain of dependent configuration breaks — rather than configuring everything at once and debugging a wall of failures at the end.</li>
+        <li>GRE tunnels encapsulate traffic, but they don't encrypt it. This design connects two private address spaces over a transit network, but it isn't a substitute for IPsec if confidentiality of the traffic itself matters.</li>
+        <li>Static routes work cleanly here because the topology is small and fixed. In a larger or growing environment, this same tunnel would typically carry a dynamic routing protocol instead of hand-maintained routes on each side.</li>
+      </ul>
+    </section>
+
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a href="index.html">← back to Network Security projects</a>
+  </div>
+</footer>
+
+</body>
+</html>
