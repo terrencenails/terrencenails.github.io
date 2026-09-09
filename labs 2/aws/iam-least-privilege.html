@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IAM Least-Privilege Enforcement — Lab Write-Up</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0a0f1a; --panel:#121a29; --panel-2:#0e1521; --border:#213048;
+    --copper:#d68a3c; --copper-dim:#8a5a26; --green:#6fae7f; --red:#c1554a;
+    --text:#e8ecf1; --text-dim:#8b96a8; --text-faint:#4d5b70;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--ink);color:var(--text);font-family:'IBM Plex Sans',sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;}
+  body::before{
+    content:'';position:fixed;inset:0;
+    background-image:linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size:48px 48px;pointer-events:none;z-index:0;
+  }
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:760px;margin:0 auto;padding:0 24px;position:relative;z-index:1;}
+  nav{position:sticky;top:0;z-index:10;background:rgba(10,15,26,0.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);}
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;max-width:760px;}
+  .back-link{font-family:'IBM Plex Mono',monospace;font-size:0.8rem;color:var(--text-dim);}
+  .back-link:hover{color:var(--copper);}
+  .nav-brand{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.95rem;}
+  .nav-brand .dot{color:var(--copper);}
+
+  header{padding:56px 0 40px;border-bottom:1px solid var(--border);}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--copper);letter-spacing:0.08em;margin-bottom:14px;}
+  h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(1.7rem,4.5vw,2.3rem);line-height:1.15;margin-bottom:16px;}
+  .lead{color:var(--text-dim);font-size:1.02rem;max-width:620px;margin-bottom:24px;}
+  .meta-row{display:flex;flex-wrap:wrap;gap:8px;}
+  .badge{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;border:1px solid var(--border);color:var(--text-dim);padding:5px 10px;border-radius:2px;background:var(--panel);}
+
+  main{padding:48px 0 80px;}
+  section{margin-bottom:56px;}
+  .section-tag{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--copper);letter-spacing:0.08em;margin-bottom:10px;display:block;}
+  h2{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1.25rem;margin-bottom:14px;}
+  p{color:var(--text-dim);margin-bottom:14px;max-width:640px;}
+  p strong{color:var(--text);font-weight:500;}
+
+  .step{
+    border:1px solid var(--border);background:var(--panel);border-radius:3px;
+    padding:20px 20px 0;margin-bottom:20px;overflow:hidden;
+  }
+  .step-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .step-num{font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--copper);border:1px solid var(--copper-dim);padding:2px 8px;border-radius:2px;}
+  .step h3{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:600;}
+  .step p{margin-bottom:14px;font-size:0.9rem;}
+  .step img{width:100%;border-radius:2px 2px 0 0;border-top:1px solid var(--border);display:block;}
+
+  .status-tag{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;padding:2px 8px;border-radius:2px;border:1px solid;display:inline-block;margin-bottom:10px;}
+  .status-tag.ok{color:var(--green);border-color:rgba(111,174,127,0.4);background:rgba(111,174,127,0.06);}
+  .status-tag.denied{color:var(--red);border-color:rgba(193,85,74,0.4);background:rgba(193,85,74,0.06);}
+
+  .callout{
+    border-left:2px solid var(--copper);background:var(--panel-2);
+    padding:16px 20px;border-radius:0 3px 3px 0;margin-bottom:20px;
+  }
+  .callout p{margin-bottom:0;color:var(--text);font-size:0.92rem;}
+
+  ul.takeaways{list-style:none;}
+  ul.takeaways li{
+    color:var(--text-dim);margin-bottom:12px;padding-left:20px;position:relative;font-size:0.94rem;max-width:620px;
+  }
+  ul.takeaways li::before{content:'—';position:absolute;left:0;color:var(--copper);}
+
+  footer{border-top:1px solid var(--border);padding:32px 0 60px;text-align:center;}
+  footer a{font-family:'IBM Plex Mono',monospace;font-size:0.8rem;color:var(--text-dim);}
+  footer a:hover{color:var(--copper);}
+
+  @media (max-width:640px){
+    .step{padding:16px 16px 0;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="back-link" href="index.html">← back to AWS projects</a>
+    <div class="nav-brand">terrencenails<span class="dot">.</span>lab</div>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <span class="eyebrow">// AWS PROJECTS</span>
+    <h1>IAM Least-Privilege Enforcement: User, Group, and MFA Setup</h1>
+    <p class="lead">Provisioned an IAM user and group under a least-privilege model, enforced MFA, then logged in as the restricted user to verify the policy boundary actually held — not just that it looked right on paper.</p>
+    <div class="meta-row">
+      <div class="badge">AWS IAM</div>
+      <div class="badge">Least Privilege</div>
+      <div class="badge">MFA</div>
+      <div class="badge">CISSP · IAM Domain</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+
+    <section>
+      <span class="section-tag">// OBJECTIVE</span>
+      <h2>Why this lab</h2>
+      <p>Least-privilege access is easy to state as policy and easy to get wrong in practice — overly broad managed policies get attached "to keep things moving," and nobody finds out until an audit or an incident. This lab builds a restricted IAM identity from scratch and then <strong>tests the boundary as the attacker or auditor would</strong>: sign in as that user and try to do something it shouldn't be able to do.</p>
+    </section>
+
+    <section>
+      <span class="section-tag">// BUILD</span>
+      <h2>Provisioning the user and group</h2>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">01</span><h3>Navigate to IAM</h3></div>
+        <p>Opened the IAM console to begin provisioning a scoped-down identity rather than reusing root or an over-permissioned existing user.</p>
+        <img src="assets/iam-lab/01-search-iam.png" alt="Searching for IAM service in AWS console">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">02</span><h3>Create the user</h3></div>
+        <p>Under Users, selected Create user and named the identity <strong>Alexa</strong> — a dedicated test identity rather than reusing an admin account.</p>
+        <img src="assets/iam-lab/02-create-user.png" alt="Navigating to Users then Create user">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">03</span><h3>Set user details</h3></div>
+        <p>Enabled console access with an autogenerated password and required a password reset on first sign-in — no shared or reused credentials.</p>
+        <img src="assets/iam-lab/03-user-details.png" alt="Specifying user details with autogenerated password">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">04</span><h3>Create the permissions group</h3></div>
+        <p>Rather than attaching policies to the user directly, created a group — <strong>DevGroup</strong> — and attached exactly two managed policies: <strong>AmazonS3FullAccess</strong> and <strong>AmazonEC2ReadOnlyAccess</strong>. The deliberate asymmetry is the point of the test: full access to one service, read-only to another.</p>
+        <img src="assets/iam-lab/04-create-group-policies.png" alt="Naming the group DevGroup and attaching S3 and EC2 read-only policies">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">05</span><h3>Group created</h3></div>
+        <p>Confirmed DevGroup existed with its policy set before attaching any user — verifying the permission boundary independent of identity.</p>
+        <img src="assets/iam-lab/05-group-created.png" alt="DevGroup user group created confirmation">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">06</span><h3>Attach user to group</h3></div>
+        <p>Added Alexa to DevGroup during user creation — inheriting the group's policy set rather than getting any standalone permissions.</p>
+        <img src="assets/iam-lab/06-add-user-to-group.png" alt="Adding user to DevGroup during creation">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">07</span><h3>Review before create</h3></div>
+        <p>Final review confirmed the only permissions in play were DevGroup's policies plus the default IAMUserChangePassword self-service policy — no surprise inherited access.</p>
+        <img src="assets/iam-lab/07-review-create.png" alt="Review and create screen showing DevGroup and IAMUserChangePassword">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">08</span><h3>Retrieve credentials</h3></div>
+        <p>Captured the one-time autogenerated password — AWS only surfaces this once, so it has to be recorded at creation time.</p>
+        <img src="assets/iam-lab/08-retrieve-password.png" alt="Retrieve password screen">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">09</span><h3>User confirmed</h3></div>
+        <p>Alexa now shows in the Users list, bound to DevGroup, with no MFA yet — the next gap to close.</p>
+        <img src="assets/iam-lab/09-user-created.png" alt="Users list showing Alexa">
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// BUILD</span>
+      <h2>Enforcing MFA</h2>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">10</span><h3>Flag console access without MFA</h3></div>
+        <p>The user's security credentials tab flagged console access as <strong>enabled without MFA</strong> — a real finding a security review would catch, so it got fixed rather than left as a known gap.</p>
+        <img src="assets/iam-lab/10-assign-mfa.png" alt="Security credentials tab showing console access enabled without MFA">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">11</span><h3>Choose device type</h3></div>
+        <p>Selected an authenticator app as the MFA device type — no hardware token needed for this identity's use case.</p>
+        <img src="assets/iam-lab/11-mfa-device-type.png" alt="Selecting MFA device type as authenticator app">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">12</span><h3>Bind the device</h3></div>
+        <p>Scanned the QR code into an authenticator app and confirmed with two consecutive codes, proving possession of the device rather than a single lucky code.</p>
+        <img src="assets/iam-lab/12-mfa-qr-setup.png" alt="Scanning QR code and entering two consecutive MFA codes">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">13</span><h3>MFA active</h3></div>
+        <p>Console access now shows <strong>enabled with MFA</strong>, and the virtual device is listed under the user's security credentials.</p>
+        <img src="assets/iam-lab/13-mfa-added.png" alt="MFA device assigned confirmation">
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// TEST</span>
+      <h2>Verifying the boundary as the restricted user</h2>
+      <p>This is the part most labs skip: after building the identity, signed <strong>out</strong> of the admin account and signed back <strong>in as Alexa</strong>, then deliberately tried both an allowed action and a disallowed one.</p>
+
+      <div class="step">
+        <span class="status-tag ok" style="margin:20px 0 0 20px;">✓ ALLOWED</span>
+        <div class="step-head" style="margin-left:20px;"><span class="step-num">14</span><h3>Signed in as Alexa</h3></div>
+        <p style="margin-left:20px;">Confirmed the session was running as the IAM user, not the account root or an admin identity — a clean baseline for the test.</p>
+        <img src="assets/iam-lab/14-signed-in-as-user.png" alt="Signed in as IAM user Alexa">
+      </div>
+
+      <div class="step">
+        <span class="status-tag ok" style="margin:20px 0 0 20px;">✓ ALLOWED</span>
+        <div class="step-head" style="margin-left:20px;"><span class="step-num">15</span><h3>Created an S3 bucket</h3></div>
+        <p style="margin-left:20px;">With AmazonS3FullAccess in the policy set, bucket creation succeeded without issue — confirming the group policy was actually applied to this identity's session.</p>
+        <img src="assets/iam-lab/15-s3-bucket-created.png" alt="Successfully created S3 bucket as IAM user">
+      </div>
+
+      <div class="step">
+        <span class="status-tag denied" style="margin:20px 0 0 20px;">✕ DENIED</span>
+        <div class="step-head" style="margin-left:20px;"><span class="step-num">16</span><h3>Attempted to launch an EC2 instance</h3></div>
+        <p style="margin-left:20px;">Navigated to EC2 and attempted Launch Instance — the action a read-only identity should not be able to complete.</p>
+        <img src="assets/iam-lab/16-launch-ec2.png" alt="Navigating to launch an EC2 instance">
+      </div>
+
+      <div class="step">
+        <span class="status-tag denied" style="margin:20px 0 0 20px;">✕ DENIED</span>
+        <div class="step-head" style="margin-left:20px;"><span class="step-num">17</span><h3>Key pair creation blocked</h3></div>
+        <p style="margin-left:20px;">AWS denied <code>ec2:CreateKeyPair</code> — the first sign the read-only policy was doing exactly what it was supposed to.</p>
+        <img src="assets/iam-lab/17-keypair-denied.png" alt="Access denied creating a key pair">
+      </div>
+
+      <div class="step">
+        <span class="status-tag denied" style="margin:20px 0 0 20px;">✕ DENIED</span>
+        <div class="step-head" style="margin-left:20px;"><span class="step-num">18</span><h3>Instance launch denied</h3></div>
+        <p style="margin-left:20px;">The launch itself failed with <strong>"not authorized to perform ec2:CreateSecurityGroup"</strong> — the read-only policy correctly blocked every write action in the launch workflow, not just one.</p>
+        <img src="assets/iam-lab/18-launch-denied.png" alt="EC2 instance launch failed due to insufficient permissions">
+      </div>
+
+      <div class="step">
+        <span class="status-tag ok" style="margin:20px 0 0 20px;">✓ ALLOWED</span>
+        <div class="step-head" style="margin-left:20px;"><span class="step-num">19</span><h3>Uploaded an object to the bucket</h3></div>
+        <p style="margin-left:20px;">Beyond just creating the bucket, uploaded an actual file into it — confirming S3 write access extends to object-level operations, not just bucket creation.</p>
+        <img src="assets/iam-lab/21-s3-upload-success.png" alt="Upload succeeded to S3 bucket">
+      </div>
+
+      <div class="step">
+        <span class="status-tag ok" style="margin:20px 0 0 20px;">✓ ALLOWED</span>
+        <div class="step-head" style="margin-left:20px;"><span class="step-num">20</span><h3>Object confirmed in bucket</h3></div>
+        <p style="margin-left:20px;">The uploaded file shows up in the bucket's object list — a full round trip on the S3 permission, not just a one-time success message.</p>
+        <img src="assets/iam-lab/22-s3-object-listed.png" alt="Uploaded file listed in S3 bucket objects">
+      </div>
+
+      <div class="step">
+        <span class="status-tag denied" style="margin:20px 0 0 20px;">✕ DENIED</span>
+        <div class="step-head" style="margin-left:20px;"><span class="step-num">21</span><h3>VPC creation blocked</h3></div>
+        <p style="margin-left:20px;">Tried a second, unrelated EC2 write action — creating a VPC. Denied on <code>ec2:CreateVpc</code>, showing the read-only boundary holds across the EC2 service broadly, not just for the instance-launch workflow specifically.</p>
+        <img src="assets/iam-lab/23-vpc-create-denied.png" alt="Error creating VPC due to insufficient permissions">
+      </div>
+
+      <div class="step">
+        <span class="status-tag denied" style="margin:20px 0 0 20px;">✕ DENIED</span>
+        <div class="step-head" style="margin-left:20px;"><span class="step-num">22</span><h3>Stopping running instances blocked</h3></div>
+        <p style="margin-left:20px;">Even against instances the account could already see (read access includes Describe/List actions), attempting <code>ec2:StopInstances</code> was denied — confirming read-only means read-only, with no accidental write access slipping through on existing resources.</p>
+        <img src="assets/iam-lab/24-stop-instances-denied.png" alt="Failed to stop EC2 instances due to insufficient permissions">
+      </div>
+
+      <div class="callout">
+        <p><strong>Result:</strong> the policy boundary held under an actual attempt to cross it, not just in theory. S3 write access worked exactly as granted — bucket creation and object upload both succeeded — while every EC2 write action tested (launch, key pair, security group, VPC creation, stopping instances) was blocked, exactly as the read-only policy intended.</p>
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// BONUS</span>
+      <h2>Provisioning a second user via CLI (CloudShell)</h2>
+      <p>To confirm the same IAM operations work outside the console — useful for scripting or automation — repeated user creation through AWS CloudShell instead of the web UI.</p>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">23</span><h3>Open CloudShell</h3></div>
+        <p>Searched for and launched CloudShell, a browser-based shell with the AWS CLI pre-authenticated to the current account.</p>
+        <img src="assets/iam-lab/19-search-cloudshell.png" alt="Searching for CloudShell in AWS console">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">24</span><h3>Create a user with one command</h3></div>
+        <p>Ran <code>aws iam create-user --user-name Siri</code> — the same result as the console wizard, but scriptable and repeatable, which matters at any scale beyond a handful of users.</p>
+        <img src="assets/iam-lab/20-cli-create-user.png" alt="aws iam create-user command output creating user Siri">
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// TAKEAWAYS</span>
+      <h2>What this demonstrates</h2>
+      <ul class="takeaways">
+        <li>Group-based policy assignment (rather than attaching policies to individual users) keeps permissions auditable and consistent — DevGroup's policy set is the single source of truth for anyone added to it.</li>
+        <li>MFA gaps are easy to create silently — AWS surfaced the "enabled without MFA" warning automatically, which is exactly the kind of finding a CISSP-aligned access review should catch before it becomes an incident.</li>
+        <li>Least privilege isn't proven by reading a policy document — it's proven by attempting the disallowed action and watching it fail, repeatedly, across different services and operations (launch, key pair, security group, VPC, stop). That's the difference between <em>documented</em> access control and <em>verified</em> access control.</li>
+        <li>Asymmetric access (full on one service, read-only on another) is a realistic enterprise pattern — e.g., a developer who needs to manage application storage but should never be able to spin up, tear down, or stop compute.</li>
+        <li>The same IAM operations are available through the CLI/CloudShell as through the console — worth knowing early, since real environments manage identity at scale through scripts and infrastructure-as-code, not click-through wizards.</li>
+      </ul>
+    </section>
+
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a href="index.html">← back to AWS projects</a>
+  </div>
+</footer>
+
+</body>
+</html>
