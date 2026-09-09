@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>terrencenails — Enterprise Security Architecture Lab Log</title>
+<title>terrencenails — Enterprise Security Architecture Projects Log</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -99,8 +99,9 @@
   }
   h1 .accent{color:var(--copper);}
   .hero-sub{
-    font-size:1.05rem;color:var(--text-dim);max-width:640px;margin-bottom:32px;
+    font-size:1.05rem;color:var(--text-dim);max-width:640px;margin-bottom:16px;
   }
+  .hero-sub:last-of-type{margin-bottom:32px;}
   .hero-meta{
     display:flex;flex-wrap:wrap;gap:10px;
   }
@@ -166,7 +167,7 @@
     font-family:'IBM Plex Mono',monospace;font-size:0.82rem;
   }
   .cert-row{
-    display:grid;grid-template-columns:1fr 140px 130px;
+    display:grid;grid-template-columns:1fr 130px 160px;
     padding:14px 20px;border-bottom:1px solid var(--border);
     align-items:center;
   }
@@ -181,6 +182,36 @@
   /* ABOUT */
   .about-body{color:var(--text-dim);font-size:0.95rem;max-width:640px;}
   .about-body p{margin-bottom:16px;}
+
+  .about-timeline{position:relative;padding-left:30px;max-width:640px;margin-bottom:32px;}
+  .about-timeline::before{content:'';position:absolute;left:5px;top:6px;bottom:6px;width:1px;background:var(--border);}
+  .timeline-item{position:relative;margin-bottom:26px;}
+  .timeline-item:last-child{margin-bottom:0;}
+  .timeline-item::before{
+    content:'';position:absolute;left:-30px;top:5px;width:9px;height:9px;border-radius:50%;
+    background:var(--ink);border:2px solid var(--copper-dim);
+  }
+  .timeline-item.current::before{background:var(--green);border-color:var(--green);box-shadow:0 0 6px var(--green);}
+  .timeline-item.next::before{background:var(--ink);border-color:var(--text-faint);border-style:dashed;}
+  .timeline-stage{
+    display:block;font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--copper);
+    letter-spacing:0.06em;margin-bottom:4px;
+  }
+  .timeline-item.next .timeline-stage{color:var(--text-faint);}
+  .timeline-item h3{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:600;margin-bottom:6px;}
+  .timeline-item p{color:var(--text-dim);font-size:0.9rem;max-width:560px;}
+
+  .offduty-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px;}
+  .offduty-row span{
+    font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--text-dim);
+    border:1px solid var(--border);padding:5px 11px;border-radius:2px;background:var(--panel);
+  }
+
+  .about-closer{
+    border-left:2px solid var(--copper);background:var(--panel-2);
+    padding:16px 20px;border-radius:0 3px 3px 0;max-width:600px;
+  }
+  .about-closer p{margin:0;color:var(--text);font-size:0.94rem;font-style:italic;}
 
   /* FOOTER */
   footer{border-top:1px solid var(--border);padding:40px 24px 60px;}
@@ -218,6 +249,7 @@
     <div class="nav-links">
       <a href="#projects"><span class="idx">01</span>Projects</a>
       <a href="#certs"><span class="idx">02</span>Certifications</a>
+      <a href="#education"><span class="idx">03</span>Education</a>
     </div>
   </div>
 </nav>
@@ -226,13 +258,16 @@
   <div class="wrap">
     <div class="status-pill"><span class="blink"></span>STATUS: OPEN TO OPPORTUNITIES</div>
     <div class="terminal">
-      <span class="prompt">terrencenails@lab:~$</span> <span class="cmd">whoami</span><span class="caret"></span>
+      <span class="prompt">terrencenails@projects:~$</span> <span class="cmd">whoami</span><span class="caret"></span>
     </div>
     <h1>Enterprise &amp; security architect,<br>building it in the <span class="accent">lab</span> first.</h1>
-    <p class="hero-sub">I'm Terrence Nails, a Senior Systems Engineer at TBM Technology Consulting with a B.S. in Computer Networks &amp; Cybersecurity from the University of Maryland, currently pursuing an M.S. in Information Systems Engineering at Johns Hopkins. My day-to-day is hands-on and highly technical, so I built this lab to document my own journey — the designs, the failures, and the processes behind them, written down as I go rather than after the fact. Outside the lab, you'll find me training Muay Thai, at the gym, traveling, or barbecuing.</p>
+    <p class="hero-sub">I'm Terrence Nails — an Army veteran (7 years), Senior Systems Engineer at TBM Technology Consulting, and a graduate with a B.S. in Computer Networks &amp; Cybersecurity from the University of Maryland. Starting Spring 2027, I'll be pursuing a Master's in Engineering Management with a concentration in Technical Leadership at Johns Hopkins.</p>
+    <p class="hero-sub">My path into IT actually started before any of that — working as a sales rep at Cricket Wireless, where customers started coming to me specifically to get their phones fixed. Diagnosing what was wrong and solving it myself was more satisfying than sales ever was. One customer even told me I should go into IT, since I was clearly better at fixing the problem than selling around it — advice that stuck, and pushed me toward my first certification, CompTIA A+.</p>
+    <p class="hero-sub">Fast forward, my day-to-day now is hands-on and highly technical, so I built this projects lab to document my own journey — the designs, the failures, and the processes behind them, written down as I go rather than after the fact. When I'm not breaking and fixing things, you'll find me training Muay Thai, at the gym, traveling (12+ countries and counting), or barbecuing.</p>
+    <p class="hero-sub" style="font-style:italic;color:var(--text);">Whether it was a cracked phone screen or a broken IAM policy, I've always been the one who wants to open it up and figure out why.</p>
     <div class="hero-meta">
       <div class="badge">Active <b>Secret</b> clearance</div>
-      <div class="badge">Pursuing <b>CCNP SDSI</b> &amp; <b>CISSP</b></div>
+      <div class="badge">Pursuing <b>Master's in Engineering Management</b> &amp; <b>CISSP</b></div>
       <div class="badge">Based in <b>Washington, DC</b></div>
     </div>
   </div>
@@ -335,14 +370,35 @@
         <div>05/07/2029</div>
       </div>
       <div class="cert-row">
-        <div>CCNP Enterprise — SDSI concentration</div>
-        <div class="cert-status progress"><span class="dot"></span>In progress</div>
-        <div>2026</div>
+        <div>CCNP Security — SDSI concentration</div>
+        <div class="cert-status active"><span class="dot"></span>Active</div>
+        <div>08/30/2029</div>
       </div>
       <div class="cert-row">
         <div>CISSP</div>
         <div class="cert-status progress"><span class="dot"></span>In progress</div>
         <div>2026</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="education">
+  <div class="wrap">
+    <div class="section-head"><span class="tag">// 03</span><h2>Education</h2></div>
+    <div class="cert-table">
+      <div class="cert-row head">
+        <div>Degree</div><div>Status</div><div>Completed / Expected</div>
+      </div>
+      <div class="cert-row">
+        <div>B.S., Computer Networks &amp; Cybersecurity — University of Maryland</div>
+        <div class="cert-status active"><span class="dot"></span>Completed</div>
+        <div>—</div>
+      </div>
+      <div class="cert-row">
+        <div>M.S., Engineering Management (Technical Leadership) — Johns Hopkins University</div>
+        <div class="cert-status progress"><span class="dot"></span>In progress</div>
+        <div>Starts Spring 2027</div>
       </div>
     </div>
   </div>
