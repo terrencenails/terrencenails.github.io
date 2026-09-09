@@ -95,7 +95,6 @@
       <div class="badge">AWS IAM</div>
       <div class="badge">Least Privilege</div>
       <div class="badge">MFA</div>
-      <div class="badge">CISSP · IAM Domain</div>
     </div>
   </div>
 </header>
@@ -293,7 +292,7 @@
       <h2>What this demonstrates</h2>
       <ul class="takeaways">
         <li>Group-based policy assignment (rather than attaching policies to individual users) keeps permissions auditable and consistent — DevGroup's policy set is the single source of truth for anyone added to it.</li>
-        <li>MFA gaps are easy to create silently — AWS surfaced the "enabled without MFA" warning automatically, which is exactly the kind of finding a CISSP-aligned access review should catch before it becomes an incident.</li>
+        <li>MFA gaps are easy to create silently — AWS surfaced the "enabled without MFA" warning automatically, which is exactly the kind of finding a thorough access review should catch before it becomes an incident.</li>
         <li>Least privilege isn't proven by reading a policy document — it's proven by attempting the disallowed action and watching it fail, repeatedly, across different services and operations (launch, key pair, security group, VPC, stop). That's the difference between <em>documented</em> access control and <em>verified</em> access control.</li>
         <li>Asymmetric access (full on one service, read-only on another) is a realistic enterprise pattern — e.g., a developer who needs to manage application storage but should never be able to spin up, tear down, or stop compute.</li>
         <li>The same IAM operations are available through the CLI/CloudShell as through the console — worth knowing early, since real environments manage identity at scale through scripts and infrastructure-as-code, not click-through wizards.</li>
