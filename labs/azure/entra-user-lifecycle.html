@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Microsoft Entra ID User Lifecycle — Project Write-Up</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0a0f1a; --panel:#121a29; --panel-2:#0e1521; --border:#213048;
+    --copper:#d68a3c; --copper-dim:#8a5a26; --green:#6fae7f; --red:#c1554a;
+    --text:#e8ecf1; --text-dim:#8b96a8; --text-faint:#4d5b70;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--ink);color:var(--text);font-family:'IBM Plex Sans',sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;}
+  body::before{
+    content:'';position:fixed;inset:0;
+    background-image:linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size:48px 48px;pointer-events:none;z-index:0;
+  }
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:760px;margin:0 auto;padding:0 24px;position:relative;z-index:1;}
+  nav{position:sticky;top:0;z-index:10;background:rgba(10,15,26,0.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);}
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;max-width:760px;}
+  .back-link{font-family:'IBM Plex Mono',monospace;font-size:0.8rem;color:var(--text-dim);}
+  .back-link:hover{color:var(--copper);}
+  .nav-brand{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.95rem;}
+  .nav-brand .dot{color:var(--copper);}
+
+  header{padding:56px 0 40px;border-bottom:1px solid var(--border);}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--copper);letter-spacing:0.08em;margin-bottom:14px;}
+  h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(1.7rem,4.5vw,2.3rem);line-height:1.15;margin-bottom:16px;}
+  .lead{color:var(--text-dim);font-size:1.02rem;max-width:620px;margin-bottom:24px;}
+  .meta-row{display:flex;flex-wrap:wrap;gap:8px;}
+  .badge{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;border:1px solid var(--border);color:var(--text-dim);padding:5px 10px;border-radius:2px;background:var(--panel);}
+
+  main{padding:48px 0 80px;}
+  section{margin-bottom:56px;}
+  .section-tag{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--copper);letter-spacing:0.08em;margin-bottom:10px;display:block;}
+  h2{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1.25rem;margin-bottom:14px;}
+  p{color:var(--text-dim);margin-bottom:14px;max-width:640px;}
+  p strong{color:var(--text);font-weight:500;}
+
+  .step{
+    border:1px solid var(--border);background:var(--panel);border-radius:3px;
+    padding:20px 20px 0;margin-bottom:20px;overflow:hidden;
+  }
+  .step-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .step-num{font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--copper);border:1px solid var(--copper-dim);padding:2px 8px;border-radius:2px;}
+  .step h3{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:600;}
+  .step p{margin-bottom:14px;font-size:0.9rem;}
+  .step img{width:100%;border-radius:2px 2px 0 0;border-top:1px solid var(--border);display:block;}
+
+  .status-tag{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;padding:2px 8px;border-radius:2px;border:1px solid;display:inline-block;margin-bottom:10px;}
+  .status-tag.ok{color:var(--green);border-color:rgba(111,174,127,0.4);background:rgba(111,174,127,0.06);}
+  .status-tag.denied{color:var(--red);border-color:rgba(193,85,74,0.4);background:rgba(193,85,74,0.06);}
+  .status-tag.warn{color:var(--copper);border-color:rgba(214,138,60,0.4);background:rgba(214,138,60,0.08);}
+
+  .callout{
+    border-left:2px solid var(--copper);background:var(--panel-2);
+    padding:16px 20px;border-radius:0 3px 3px 0;margin-bottom:20px;
+  }
+  .callout p{margin-bottom:0;color:var(--text);font-size:0.92rem;}
+
+  .sandbox-notice{
+    border:1px dashed var(--text-faint);background:var(--panel-2);
+    padding:18px 20px;border-radius:3px;margin-bottom:20px;
+  }
+  .sandbox-notice .tag{
+    font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--text-dim);
+    letter-spacing:0.08em;display:flex;align-items:center;gap:6px;margin-bottom:10px;
+  }
+  .sandbox-notice p{margin-bottom:8px;font-size:0.9rem;}
+  .sandbox-notice p:last-child{margin-bottom:0;}
+
+  .prod-note{
+    border-left:2px solid var(--green);background:var(--panel-2);
+    padding:10px 14px;border-radius:0 3px 3px 0;margin-bottom:14px;
+  }
+  .prod-note strong{
+    font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--green);
+    letter-spacing:0.06em;display:block;margin-bottom:4px;
+  }
+  .prod-note p{margin-bottom:0;font-size:0.85rem;color:var(--text-dim);}
+
+  ul.takeaways{list-style:none;}
+  ul.takeaways li{
+    color:var(--text-dim);margin-bottom:12px;padding-left:20px;position:relative;font-size:0.94rem;max-width:620px;
+  }
+  ul.takeaways li::before{content:'—';position:absolute;left:0;color:var(--copper);}
+
+  footer{border-top:1px solid var(--border);padding:32px 0 60px;text-align:center;}
+  footer a{font-family:'IBM Plex Mono',monospace;font-size:0.8rem;color:var(--text-dim);}
+  footer a:hover{color:var(--copper);}
+
+  @media (max-width:640px){
+    .step{padding:16px 16px 0;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="back-link" href="index.html">← back to Azure projects</a>
+    <div class="nav-brand">terrencenails<span class="dot">.</span>log</div>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <span class="eyebrow">// AZURE PROJECTS</span>
+    <h1>Microsoft Entra ID: User Account Lifecycle</h1>
+    <p class="lead">Created, modified, and revoked access from Microsoft Entra ID user accounts entirely from the Portal — covering the identity operations a helpdesk or IT admin role actually performs day to day, not just initial provisioning.</p>
+    <div class="meta-row">
+      <div class="badge">Azure</div>
+      <div class="badge">Microsoft Entra ID</div>
+      <div class="badge">Identity</div>
+      <div class="badge">IAM</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+
+    <section>
+      <span class="section-tag">// OBJECTIVE</span>
+      <h2>Why this project</h2>
+      <p>Most identity write-ups stop at account creation, but that's the smallest part of what an admin actually does. A user's account has a full lifecycle — created, updated as their role changes, and locked out of active sessions the moment something looks wrong. This project walks those stages against test accounts in Microsoft Entra ID (formerly Azure Active Directory), treating session revocation with the same care as creation, since in a real environment that's usually the higher-stakes operation.</p>
+    </section>
+
+    <section>
+      <span class="section-tag">// NAVIGATE</span>
+      <h2>Getting to Microsoft Entra ID</h2>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">01</span><h3>Search for Microsoft Entra ID</h3></div>
+        <p>Typed <code>microsoft entra id</code> into the Azure Portal's global search bar and selected the service from the results rather than navigating a menu tree — the fastest route to any Azure service once its name is known, and worth building as a habit over memorizing where every blade lives in the left-hand navigation.</p>
+        <img src="assets/entra-user-lifecycle/01-search-entra-id.png" alt="Azure Portal global search results for Microsoft Entra ID">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">02</span><h3>Confirm the tenant and check the current user count</h3></div>
+        <p>Landed on the tenant's Overview page — <code>Real Active Directory Labs P3</code> — and clicked the Users tile to see what already existed before creating anything. Five accounts were already present in this training tenant. Checking the baseline before adding anything is the same instinct as confirming a security group's default rules before touching them elsewhere in this portfolio: know what's already there before changing it, so it's possible to say with certainty afterward exactly what this project added.</p>
+        <img src="assets/entra-user-lifecycle/02-overview-users-count.png" alt="Microsoft Entra ID tenant Overview page showing basic information and a Users count of 5">
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// CREATE</span>
+      <h2>Creating three user accounts</h2>
+      <p>Three accounts were created for this lab — <code>rp.one</code>, <code>rp.two</code>, and <code>rp.three</code> — so that account modification and session revocation could each be demonstrated against a distinct account without one operation interfering with evidence needed for another.</p>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">03</span><h3>Add → User → Create new user</h3></div>
+        <p>From the Users blade, the <strong>+ Add</strong> dropdown offers both <em>Create new user</em> (an account native to this tenant) and <em>Invite external user</em> (a B2B guest, authenticated against their own home tenant). This project uses the former since the goal is managing internal-style accounts through their full lifecycle, not federated guest access.</p>
+        <img src="assets/entra-user-lifecycle/03-create-user-dropdown.png" alt="Add dropdown menu on the Microsoft Entra ID Overview page with Create new user highlighted, tenant ID redacted in the Basic information panel">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">04</span><h3>rp.one</h3></div>
+        <p>User principal name <code>rp.one</code>, display name <strong>RP One</strong>, password left on auto-generate. Auto-generating the password here rather than typing one is deliberate — it guarantees the initial credential is random and unknown to anyone but whoever reads it off this one-time screen, which is the same principle behind forcing a reset on first sign-in.</p>
+        <img src="assets/entra-user-lifecycle/04-create-rp-one.png" alt="Create new user Basics tab for rp.one, with user principal name, display name, and Review plus create highlighted">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">05</span><h3>rp.two</h3></div>
+        <p>Same process repeated for <code>rp.two</code> / <strong>RP Two</strong>.</p>
+        <img src="assets/entra-user-lifecycle/05-create-rp-two.png" alt="Create new user Basics tab for rp.two">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">06</span><h3>rp.three</h3></div>
+        <p>And again for <code>rp.three</code> / <strong>RP Three</strong>, rounding out the three test accounts used across this project.</p>
+        <img src="assets/entra-user-lifecycle/06-create-rp-three.png" alt="Create new user Basics tab for rp.three">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">07</span><h3>Confirm all three accounts in the Users list</h3></div>
+        <p>The Users blade now shows eight accounts total — the five that existed before this project plus <code>RP One</code>, <code>RP Three</code>, and <code>RP Two</code>. The list needed a manual refresh before the new accounts appeared, a small reminder that directory writes in a distributed identity service aren't always instantly consistent across every view.</p>
+        <img src="assets/entra-user-lifecycle/07-users-list-all-three.png" alt="Microsoft Entra ID Users list showing 8 users including RP One, RP Two, and RP Three, with RP One highlighted">
+      </div>
+
+      <div class="callout">
+        <p><strong>Result:</strong> three new Member accounts created in the tenant, each verified present in the Users list before moving on to modifying one of them.</p>
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// MODIFY</span>
+      <h2>Updating RP One's profile</h2>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">08</span><h3>Open RP One's Overview page</h3></div>
+        <p>Clicking into an account from the Users list lands on its Overview page — basic info, group memberships, assigned roles and licenses, and quick actions, all in one place. This is also where an admin would see at a glance whether the account is enabled, whether it has any assigned roles, and how it was created (native vs. invited).</p>
+        <img src="assets/entra-user-lifecycle/08-rp-one-overview.png" alt="RP One user Overview page showing basic info, account status, and quick actions, with Object ID redacted">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">09</span><h3>Edit properties</h3></div>
+        <p>The <strong>Edit properties</strong> action opens a tabbed form — Identity, Job Information, Contact Information, Parental controls, Settings, On-premises — scoped to only the fields that can actually be changed here, with a note that this view doesn't show every property Entra ID stores, only the ones exposed for editing through the Portal.</p>
+        <img src="assets/entra-user-lifecycle/09-edit-properties-click.png" alt="RP One Overview page with the Edit properties toolbar button highlighted">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">10</span><h3>Set first and last name on the Identity tab</h3></div>
+        <p>Display name was already set at creation time (<code>RP One</code>), but the underlying First name and Last name fields were still blank — they're separate attributes from Display name, and plenty of downstream systems (mail merge, directory exports, HR integrations) read the split fields specifically, not just the combined display string.</p>
+        <img src="assets/entra-user-lifecycle/10-identity-tab.png" alt="RP One Identity properties tab with First name and Last name fields highlighted">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">11</span><h3>Set job title and department</h3></div>
+        <p>Job title set to <strong>Helpdesk Technician</strong>, department to <strong>IT Helpdesk</strong>. These attributes aren't just descriptive metadata — in a real tenant they're commonly read by Conditional Access policies, dynamic group membership rules, and access reviews, so an account's job information can directly influence what it's allowed to touch.</p>
+        <img src="assets/entra-user-lifecycle/11-job-information-tab.png" alt="RP One Job Information properties tab with Job title and Department fields highlighted, and Save button highlighted">
+        <div class="prod-note">
+          <strong>IN PRODUCTION</strong>
+          <p>Job title, department, and manager would typically sync in from an authoritative HR system rather than being typed by hand into the directory — keeping identity attributes in one source of truth instead of letting them drift out of sync across systems.</p>
+        </div>
+      </div>
+
+      <div class="callout">
+        <p><strong>Result:</strong> RP One's profile updated with a proper first/last name split and accurate job information, saved and persisted back to the directory.</p>
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// MODIFY</span>
+      <h2>Resetting RP One's password</h2>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">12</span><h3>Open Reset password from the toolbar</h3></div>
+        <p>Password reset lives as its own top-level action, separate from Edit properties — a deliberate separation in the Portal's design, since resetting a credential is a materially different kind of operation (and a different blast radius if done to the wrong account) than editing descriptive attributes.</p>
+        <img src="assets/entra-user-lifecycle/12-reset-password-menu.png" alt="RP One Overview page with the Reset password toolbar button highlighted">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">13</span><h3>Confirm the reset</h3></div>
+        <p>A confirmation pane names the exact account affected — <code>rp.one@radlabs3p.onmicrosoft.com</code> — and explains up front that the resulting password is temporary and must be changed at the user's next sign-in. Surfacing that constraint before the action is taken, rather than after, is a small but deliberate bit of UX: it removes any ambiguity about whether this reset is meant to be a permanent credential.</p>
+        <img src="assets/entra-user-lifecycle/13-reset-password-confirm.png" alt="Reset password confirmation pane naming rp.one and explaining the temporary password requirement">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">14</span><h3>Record the temporary password</h3></div>
+        <p>The reset succeeds and displays a one-time temporary password that has to be captured now — it isn't retrievable again after this pane closes. In a real handoff, this is the value that would get relayed to the actual user through a separate, already-verified channel, not left sitting in a ticket or a chat log.</p>
+        <img src="assets/entra-user-lifecycle/14-reset-password-result.png" alt="Reset password result pane confirming the password has been reset, with the temporary password field redacted">
+        <div class="prod-note">
+          <strong>IN PRODUCTION</strong>
+          <p>A temporary credential like this would be relayed to the actual user through a channel already verified to be them — never pasted into a shared ticket, chat thread, or email — and self-service password reset with MFA would handle most resets without an admin touching a credential at all.</p>
+        </div>
+      </div>
+
+      <div class="callout">
+        <p><strong>Result:</strong> RP One's password reset, with the account flagged to force a change on next sign-in — the standard pattern for handing a credential to someone else without ever knowing their real, permanent password.</p>
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// REVOKE</span>
+      <h2>Revoking active sessions</h2>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">15</span><h3>Revoke sessions for RP One</h3></div>
+        <p>Separate again from both Edit properties and Reset password: <strong>Revoke sessions</strong> invalidates a user's existing refresh tokens, forcing every device and app they're currently signed into to re-authenticate. This is the action that actually matters in an active-incident scenario — resetting a password alone doesn't disconnect a session that's already authenticated, but revoking sessions does, immediately.</p>
+        <img src="assets/entra-user-lifecycle/15-revoke-sessions.png" alt="RP One Overview page with the Revoke sessions toolbar button highlighted">
+        <div class="prod-note">
+          <strong>IN PRODUCTION</strong>
+          <p>Session revocation would be one step in a broader incident-response runbook — paired with reviewing sign-in logs for the account, checking for any mailbox rules or OAuth grants an attacker may have added, and rotating any credentials the account had access to, not treated as a standalone fix on its own.</p>
+        </div>
+      </div>
+
+      <div class="callout">
+        <p><strong>Result:</strong> every active session for RP One invalidated on confirmation — the account itself still exists and can sign back in, but only after authenticating fresh.</p>
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// TAKEAWAYS</span>
+      <h2>What this demonstrates</h2>
+      <ul class="takeaways">
+        <li>Account creation is one stage of a longer lifecycle — this project deliberately covered modification and session revocation with the same attention, since those are operations with real-world stakes that go beyond initial provisioning.</li>
+        <li>Password reset and session revocation are two distinct actions that solve two distinct problems: resetting a credential doesn't disconnect an already-authenticated session, and revoking sessions doesn't rotate a compromised password. A real incident response typically needs both.</li>
+        <li>Directory attributes like job title and department aren't cosmetic — they're frequently read by access policies and group rules elsewhere in a real tenant, which is why getting them right matters beyond just filling in a form.</li>
+      </ul>
+
+      <div class="sandbox-notice">
+        <span class="tag">⚠ SANDBOX ENVIRONMENT — NOT PRODUCTION</span>
+        <p>This project was conducted in a controlled sandbox environment. Real-world/production results and practices would differ — noted inline where relevant above.</p>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a href="index.html">← back to Azure projects</a>
+  </div>
+</footer>
+
+</body>
+</html>

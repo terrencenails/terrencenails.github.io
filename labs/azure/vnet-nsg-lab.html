@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Azure VNet + NSG — Project Write-Up</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0a0f1a; --panel:#121a29; --panel-2:#0e1521; --border:#213048;
+    --copper:#d68a3c; --copper-dim:#8a5a26; --green:#6fae7f; --red:#c1554a; --info:#5e8fc9;
+    --text:#e8ecf1; --text-dim:#8b96a8; --text-faint:#4d5b70;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--ink);color:var(--text);font-family:'IBM Plex Sans',sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;}
+  body::before{
+    content:'';position:fixed;inset:0;
+    background-image:linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size:48px 48px;pointer-events:none;z-index:0;
+  }
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:760px;margin:0 auto;padding:0 24px;position:relative;z-index:1;}
+  nav{position:sticky;top:0;z-index:10;background:rgba(10,15,26,0.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);}
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;max-width:760px;}
+  .back-link{font-family:'IBM Plex Mono',monospace;font-size:0.8rem;color:var(--text-dim);}
+  .back-link:hover{color:var(--copper);}
+  .nav-brand{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.95rem;}
+  .nav-brand .dot{color:var(--copper);}
+
+  header{padding:56px 0 40px;border-bottom:1px solid var(--border);}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--copper);letter-spacing:0.08em;margin-bottom:14px;}
+  h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(1.7rem,4.5vw,2.3rem);line-height:1.15;margin-bottom:16px;}
+  .lead{color:var(--text-dim);font-size:1.02rem;max-width:620px;margin-bottom:24px;}
+  .meta-row{display:flex;flex-wrap:wrap;gap:8px;}
+  .badge{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;border:1px solid var(--border);color:var(--text-dim);padding:5px 10px;border-radius:2px;background:var(--panel);}
+
+  main{padding:48px 0 80px;}
+  section{margin-bottom:56px;}
+  .section-tag{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--copper);letter-spacing:0.08em;margin-bottom:10px;display:block;}
+  h2{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1.25rem;margin-bottom:14px;}
+  p{color:var(--text-dim);margin-bottom:14px;max-width:640px;}
+  p strong{color:var(--text);font-weight:500;}
+
+  .step{
+    border:1px solid var(--border);background:var(--panel);border-radius:3px;
+    padding:20px 20px 0;margin-bottom:20px;overflow:hidden;
+  }
+  .step-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .step-num{font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--copper);border:1px solid var(--copper-dim);padding:2px 8px;border-radius:2px;}
+  .step h3{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:600;}
+  .step p{margin-bottom:14px;font-size:0.9rem;}
+  .step img{width:100%;border-radius:2px 2px 0 0;border-top:1px solid var(--border);display:block;}
+
+  .status-tag{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;padding:2px 8px;border-radius:2px;border:1px solid;display:inline-block;margin-bottom:10px;}
+  .status-tag.ok{color:var(--green);border-color:rgba(111,174,127,0.4);background:rgba(111,174,127,0.06);}
+  .status-tag.denied{color:var(--red);border-color:rgba(193,85,74,0.4);background:rgba(193,85,74,0.06);}
+  .status-tag.warn{color:var(--copper);border-color:rgba(214,138,60,0.4);background:rgba(214,138,60,0.08);}
+
+  .callout{
+    border-left:2px solid var(--copper);background:var(--panel-2);
+    padding:16px 20px;border-radius:0 3px 3px 0;margin-bottom:20px;
+  }
+  .callout p{margin-bottom:0;color:var(--text);font-size:0.92rem;}
+
+  .sandbox-notice{
+    border:1px dashed var(--text-faint);background:var(--panel-2);
+    padding:18px 20px;border-radius:3px;margin-bottom:20px;
+  }
+  .sandbox-notice .tag{
+    font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--text-dim);
+    letter-spacing:0.08em;display:flex;align-items:center;gap:6px;margin-bottom:10px;
+  }
+  .sandbox-notice p{margin-bottom:8px;font-size:0.9rem;}
+  .sandbox-notice p:last-child{margin-bottom:0;}
+
+  .prod-note{
+    border-left:2px solid var(--green);background:var(--panel-2);
+    padding:10px 14px;border-radius:0 3px 3px 0;margin-bottom:14px;
+  }
+  .prod-note strong{
+    font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--green);
+    letter-spacing:0.06em;display:block;margin-bottom:4px;
+  }
+  .prod-note p{margin-bottom:0;font-size:0.85rem;color:var(--text-dim);}
+
+  .cmd-note{
+    border-left:2px solid var(--info);background:var(--panel-2);
+    padding:10px 14px;border-radius:0 3px 3px 0;margin-bottom:14px;
+  }
+  .cmd-note strong{
+    font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--info);
+    letter-spacing:0.06em;display:block;margin-bottom:4px;
+  }
+  .cmd-note p{margin-bottom:0;font-size:0.85rem;color:var(--text-dim);}
+
+  ul.takeaways{list-style:none;}
+  ul.takeaways li{
+    color:var(--text-dim);margin-bottom:12px;padding-left:20px;position:relative;font-size:0.94rem;max-width:620px;
+  }
+  ul.takeaways li::before{content:'—';position:absolute;left:0;color:var(--copper);}
+
+  footer{border-top:1px solid var(--border);padding:32px 0 60px;text-align:center;}
+  footer a{font-family:'IBM Plex Mono',monospace;font-size:0.8rem;color:var(--text-dim);}
+  footer a:hover{color:var(--copper);}
+
+  @media (max-width:640px){
+    .step{padding:16px 16px 0;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="back-link" href="index.html">← back to Azure projects</a>
+    <div class="nav-brand">terrencenails<span class="dot">.</span>log</div>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <span class="eyebrow">// AZURE PROJECTS</span>
+    <h1>VNet + NSG: Scoped SSH Access, Built Entirely via CLI</h1>
+    <p class="lead">Built a Virtual Network, a Network Security Group, and a least-privilege inbound rule entirely from Azure Cloud Shell — no Portal wizards — then provisioned a VM inside the protected subnet to host the workload that rule is meant to guard.</p>
+    <div class="meta-row">
+      <div class="badge">Azure</div>
+      <div class="badge">VNet</div>
+      <div class="badge">NSG</div>
+      <div class="badge">CLI</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+
+    <section>
+      <span class="section-tag">// OBJECTIVE</span>
+      <h2>Why this project</h2>
+      <p>A Network Security Group is only as good as how narrowly its rules are scoped — it's easy to open port 22 to <code>0.0.0.0/0</code> "just to get it working" and never tighten it back down. This project builds a VNet and NSG from scratch using only the CLI (to demonstrate scripting proficiency over Portal click-throughs), then deliberately scopes the inbound SSH rule to a single <code>/32</code> source instead of the common shortcut — the same least-privilege instinct behind the asymmetric IAM policy in the AWS project.</p>
+    </section>
+
+    <section>
+      <span class="section-tag">// SETUP</span>
+      <h2>Opening Cloud Shell</h2>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">01</span><h3>Launch Cloud Shell and select Bash</h3></div>
+        <p>Opened Cloud Shell from the Azure Portal toolbar and selected Bash over PowerShell. The point of doing this project through the CLI instead of the Portal's creation wizards isn't stylistic — every command run here is a line that could be dropped straight into a script or a CI/CD pipeline, whereas a sequence of Portal clicks can't be replayed, versioned, or reviewed the same way. That repeatability is the actual skill being demonstrated, not just "knowing where the buttons are."</p>
+        <img src="assets/vnet-nsg-lab/01-cloud-shell-launch.png" alt="Azure Portal Cloud Shell launch, selecting Bash environment">
+        <div class="prod-note">
+          <strong>IN PRODUCTION</strong>
+          <p>Infrastructure changes would go through version-controlled, peer-reviewed infrastructure as code rather than interactive commands — a standard baseline for how cloud environments get built and changed.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">02</span><h3>Session ready</h3></div>
+        <p>Cloud Shell connects and drops into a bash prompt. Worth noting up front: this session is <strong>ephemeral</strong> — no files or system changes persist beyond it. That matters later for anything written to local storage (like SSH keys), and it's also a reminder that Cloud Shell itself is a shared, Microsoft-managed container, not a machine I own or control — which is why its outbound IP address changes between sessions, something that actually caused a real troubleshooting detour later in this lab.</p>
+        <img src="assets/vnet-nsg-lab/02-cloud-shell-session-ready.png" alt="Cloud Shell session connected, ready at bash prompt">
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// BUILD</span>
+      <h2>Creating the VNet and subnet</h2>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">03</span><h3>Issue the VNet creation command</h3></div>
+        <p>One command creates both the VNet and its subnet together — a /16 address space (<code>10.0.0.0/16</code>) with a /24 subnet (<code>10.0.1.0/24</code>) carved out of it. The /16 is deliberately oversized for what this lab actually needs (one subnet, one VM); the reasoning is the same one real network designers use — allocate address space with room to grow, so adding a second or third subnet later doesn't mean re-addressing the whole VNet. A /24 subnet inside it is still 251 usable host addresses, far more than this lab uses, but it keeps the boundary clean and easy to reason about.</p>
+        <img src="assets/vnet-nsg-lab/03-vnet-create-command.png" alt="az network vnet create command entered in Cloud Shell">
+      </div>
+
+      <div class="step">
+        <span class="status-tag ok" style="margin-top:20px;">✓ SUCCEEDED</span>
+        <div class="step-head"><span class="step-num">04</span><h3>VNet and subnet confirmed</h3></div>
+        <p>Full JSON confirmation: <code>lab-vnet</code> and <code>lab-subnet</code> both show <code>provisioningState: Succeeded</code>. This is the CLI equivalent of what the Portal wizard would have produced — just scriptable and repeatable instead of click-through. Confirming the result explicitly here, rather than assuming the command "probably worked," is the same instinct as testing after every step in the network security labs: a command returning without an error isn't the same as confirming the resource actually exists in the state expected.</p>
+        <img src="assets/vnet-nsg-lab/04-vnet-create-result.png" alt="JSON output confirming VNet and subnet created successfully">
+        <div class="cmd-note">
+          <strong>WHAT THE OUTPUT MEANS</strong>
+          <p><code>"provisioningState": "Succeeded"</code> is Azure confirming the resource actually finished being created, not just that the request was accepted. Seeing it on both the VNet and the subnet confirms both exist.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// BUILD</span>
+      <h2>Creating the NSG</h2>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">05</span><h3>Create an empty NSG</h3></div>
+        <p>Created <code>lab-nsg</code> with no custom rules yet — just Azure's default baseline. Creating the NSG as a completely separate step, before attaching it to anything or adding any custom rules, is deliberate: it lets the default posture be inspected and understood in isolation. If the NSG were created and immediately loaded with a custom rule in the same breath, it would be much harder to say with certainty which behavior came from Azure's defaults and which came from something added — and that distinction matters when something doesn't work as expected later.</p>
+        <img src="assets/vnet-nsg-lab/05-nsg-create-command.png" alt="az network nsg create command and start of default rules output">
+        <div class="cmd-note">
+          <strong>WHAT THIS DOES</strong>
+          <p><code>az network nsg create</code> creates a new, empty firewall-like object — it doesn't filter anything yet on its own until it's attached to a subnet or network interface, which happens in a later step.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// VERIFY</span>
+      <h2>Confirming the build in the Portal</h2>
+      <p>CLI output is the primary evidence throughout this project, but it's worth cross-checking against the Portal — partly to confirm the CLI and the Portal agree, partly because a reviewer skimming a write-up finds a Portal screenshot easier to parse at a glance than raw JSON.</p>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">06</span><h3>VNet visible in the Portal</h3></div>
+        <p><code>lab-vnet</code> shows up under Virtual networks, correctly placed in <code>southcentralus</code> — confirming the CLI-created resource is identical to what a Portal-driven build would show. This cross-check matters because the CLI and the Portal are two different clients hitting the same Azure Resource Manager API underneath — if they ever disagreed, that would point to a caching or propagation problem worth investigating, not just a display quirk.</p>
+        <img src="assets/vnet-nsg-lab/06-portal-vnet-confirmed.png" alt="Azure Portal Virtual networks list showing lab-vnet">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">07</span><h3>Resource group holds both resources</h3></div>
+        <p>The resource group view confirms both <code>lab-nsg</code> and <code>lab-vnet</code> exist side by side — a clean, minimal footprint with nothing extraneous. Keeping a lab's resource group free of leftover or unrelated resources isn't just tidiness — in a real environment, resource groups are usually the unit that cost, access, and lifecycle policies get applied to, so an resource group that accumulates unrelated clutter makes it much harder to reason about blast radius if something in it needs to be locked down or deleted.</p>
+        <img src="assets/vnet-nsg-lab/07-resource-group-overview.png" alt="Resource group overview showing lab-nsg and lab-vnet resources">
+      </div>
+
+      <div class="step">
+        <span class="status-tag ok" style="margin-top:20px;">✓ DEFAULT-DENY CONFIRMED</span>
+        <div class="step-head"><span class="step-num">08</span><h3>NSG's default baseline, before any custom rules</h3></div>
+        <p>Zero custom rules, but the default rule set is already doing real work: <code>AllowVnetInBound</code> and <code>AllowAzureLoadBalancerInBound</code> at the top, <code>DenyAllInBound</code> underneath everything else. This is the actual starting security posture — worth screenshotting on its own before touching anything, so the "before" state is on record. The reason this matters beyond documentation: it proves the NSG is <em>deny-by-default</em> from the moment it exists, meaning every subsequent rule added is an explicit, auditable exception to that default — not one relaxation layered on top of an already-permissive baseline.</p>
+        <img src="assets/vnet-nsg-lab/08-nsg-default-baseline.png" alt="NSG default security rules showing AllowVnetInBound, AllowAzureLoadBalancerInBound, and DenyAllInBound">
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// BUILD</span>
+      <h2>Associating the NSG with the subnet</h2>
+
+      <div class="step">
+        <span class="status-tag ok" style="margin-top:20px;">✓ ASSOCIATED</span>
+        <div class="step-head"><span class="step-num">09</span><h3>Attach the NSG to lab-subnet</h3></div>
+        <p>An NSG that exists but isn't attached to anything filters nothing. This command binds <code>lab-nsg</code> to <code>lab-subnet</code> — the result's <code>networkSecurityGroup</code> field confirms the association took. Binding at the <em>subnet</em> level rather than at an individual VM's network interface is a deliberate choice: a subnet-level NSG automatically covers every resource placed in that subnet in the future, which is the pattern that scales — a NIC-level-only approach means remembering to attach a policy every single time a new VM is added, which is exactly the kind of manual step that eventually gets forgotten.</p>
+        <img src="assets/vnet-nsg-lab/09-nsg-subnet-association.png" alt="az network vnet subnet update command associating NSG with subnet">
+        <div class="cmd-note">
+          <strong>WHAT THIS DOES</strong>
+          <p><code>az network vnet subnet update</code> attaches the NSG to the subnet by name. The returned <code>networkSecurityGroup</code> field pointing at <code>lab-nsg</code> is the confirmation that the attachment actually took.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">10</span><h3>Confirm zero custom rules, via CLI</h3></div>
+        <p>Querying custom rules directly returns nothing — matching the Portal view from Step 08, and confirming the baseline state one more way before adding the actual allow rule. Two independent confirmations of the same "nothing here yet" state might look redundant, but it closes off the possibility that either the Portal or the CLI is caching a stale view — a small thing, but it's the difference between assuming a clean slate and actually knowing it.</p>
+        <img src="assets/vnet-nsg-lab/10-nsg-rule-list-empty.png" alt="az network nsg rule list command returning no custom rules">
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// BUILD</span>
+      <h2>Writing a least-privilege SSH rule</h2>
+      <p>The common shortcut here is an inbound allow rule for port 22 scoped to <code>0.0.0.0/0</code> — any source. That works, but it's the exact pattern a security review would flag. This rule is scoped to a single address instead.</p>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">11</span><h3>Find the source IP to scope the rule to</h3></div>
+        <p><code>curl ifconfig.me</code> returns Cloud Shell's own outbound IP — the address that would actually be doing the connecting. This step exists specifically to avoid the <code>0.0.0.0/0</code> shortcut: an inbound rule can only be as narrow as the source address it's actually written against, so the real address doing the connecting has to be known first. Worth noting this is Cloud Shell's Microsoft-managed egress IP, not a home or office IP, and it can change if the session recycles — which is exactly what happened later in this lab and had to be diagnosed.</p>
+        <img src="assets/vnet-nsg-lab/11-public-ip-lookup.png" alt="curl ifconfig.me returning the Cloud Shell session's public IP">
+        <div class="cmd-note">
+          <strong>WHAT THIS DOES</strong>
+          <p><code>curl ifconfig.me</code> asks a public web service "what IP address is this request coming from?" — a quick way to find your own outbound address without checking network settings manually.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="status-tag ok" style="margin-top:20px;">✓ RULE CREATED</span>
+        <div class="step-head"><span class="step-num">12</span><h3>Create the scoped allow rule</h3></div>
+        <p>Priority <strong>100</strong> — well ahead of the default rules at 65000+ — allowing TCP/22 inbound from that one address only (<code>/32</code>), not a range. Least-privilege by source <em>and</em> by port. The priority number is what actually decides outcome here: NSG rules are evaluated lowest-number-first, and the first matching rule wins, so a rule sitting at priority 100 is guaranteed to be evaluated well before the implicit deny at 65500 — without that low number, the rule would exist but never actually get a chance to apply.</p>
+        <img src="assets/vnet-nsg-lab/12-ssh-rule-create-result.png" alt="az network nsg rule create command and JSON confirmation of the Allow-SSH-MyIP rule">
+        <div class="cmd-note">
+          <strong>WHAT THIS DOES</strong>
+          <p><code>az network nsg rule create</code> adds one allow rule to the NSG: which port (22), which protocol (TCP), which source address, and where it ranks (<code>--priority 100</code>) relative to every other rule.</p>
+        </div>
+        <div class="prod-note">
+          <strong>IN PRODUCTION</strong>
+          <p>Source addresses would come from a maintained, version-tracked definition rather than a value edited by hand against a live environment whenever it changes.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <span class="status-tag ok" style="margin-top:20px;">✓ ACTIVE, ABOVE DEFAULT DENY</span>
+        <div class="step-head"><span class="step-num">13</span><h3>Confirm the rule in the Portal</h3></div>
+        <p><code>Allow-SSH-MyIP</code> now sits at priority 100, above <code>DenyAllInBound</code> at 65500 — exactly where it needs to be to actually take effect. Custom security rules count moved from 0 to 1. Confirming the rule's position relative to the deny rule — not just that it exists — is the point: a rule with a priority number placed incorrectly (say, above 65500) would simply never be reached, and would look identical to a correctly-placed rule if you only checked for its existence rather than its ordering.</p>
+        <img src="assets/vnet-nsg-lab/13-portal-rule-confirmed.png" alt="Azure Portal NSG rules list showing Allow-SSH-MyIP active at priority 100">
+        <div class="prod-note">
+          <strong>IN PRODUCTION</strong>
+          <p>Centralized logging and alerting would be enabled from day one, following standard security monitoring baselines, rather than relying on manual point-in-time checks.</p>
+        </div>
+      </div>
+
+      <div class="callout">
+        <p><strong>Result:</strong> the NSG went from a bare default-deny baseline to a deliberately narrow exception — one rule, one port, one exact source address, sitting well above the implicit deny. Every step was verified twice, once via CLI JSON and once via the Portal, rather than trusting either view alone.</p>
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// BUILD</span>
+      <h2>Provisioning a VM inside the protected subnet</h2>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">14</span><h3>Deploy a VM with no NIC-level NSG</h3></div>
+        <p>Created <code>lab-vm</code> inside <code>lab-subnet</code> with <code>--nsg-rule NONE</code> — deliberately preventing Azure from auto-creating a second NSG on the network interface itself. That matters: if both a subnet-level and a NIC-level NSG existed, it would be ambiguous which one was actually responsible for filtering traffic, and troubleshooting a connectivity problem later would mean checking two separate rule sets instead of one. This way, <code>lab-nsg</code> is the single source of truth for anything reaching this VM — one policy, one place to look, one place to audit.</p>
+        <img src="assets/vnet-nsg-lab/14-vm-create-result.png" alt="az vm create command and JSON result showing lab-vm running inside lab-subnet">
+        <div class="prod-note">
+          <strong>IN PRODUCTION</strong>
+          <p>Management interfaces wouldn't be exposed to the public internet at all — a standard access-control baseline — removing this exposure at the source rather than depending on a rule to catch every attempt against it.</p>
+        </div>
+      </div>
+
+      <div class="callout">
+        <p><strong>Result:</strong> a working VM now sits behind a network boundary that only admits one specific address on one specific port — everything else, including all other inbound traffic types and sources, is denied by default. The VM is the workload; the NSG rule built in this project is what decides who's allowed to reach it.</p>
+      </div>
+    </section>
+
+
+    <section>
+      <span class="section-tag">// TAKEAWAYS</span>
+      <h2>What this demonstrates</h2>
+      <ul class="takeaways">
+        <li>Every resource in this build — VNet, subnet, NSG, rule, VM — was created and verified through the CLI, not the Portal wizard. The Portal was used only to cross-check, never to build.</li>
+        <li>Scoping an inbound rule to a single <code>/32</code> source instead of <code>0.0.0.0/0</code> costs nothing extra to configure, but it's the difference between "technically works" and actually least-privilege — the same discipline as the asymmetric IAM policy in the AWS project.</li>
+        <li>Rule priority is what actually determines behavior, not just the presence of an allow rule — <code>Allow-SSH-MyIP</code> only works because it sits at priority 100, well ahead of the implicit deny at 65500.</li>
+      </ul>
+
+      <div class="sandbox-notice">
+        <span class="tag">⚠ SANDBOX ENVIRONMENT — NOT PRODUCTION</span>
+        <p>This project was conducted in a controlled sandbox environment. Real-world/production results and practices would differ — noted inline where relevant above.</p>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a href="index.html">← back to Azure projects</a>
+  </div>
+</footer>
+
+</body>
+</html>

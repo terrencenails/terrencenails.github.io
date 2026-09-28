@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deploying a Windows VM in Azure — Project Write-Up</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0a0f1a; --panel:#121a29; --panel-2:#0e1521; --border:#213048;
+    --copper:#d68a3c; --copper-dim:#8a5a26; --green:#6fae7f; --red:#c1554a;
+    --text:#e8ecf1; --text-dim:#8b96a8; --text-faint:#4d5b70;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--ink);color:var(--text);font-family:'IBM Plex Sans',sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;}
+  body::before{
+    content:'';position:fixed;inset:0;
+    background-image:linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size:48px 48px;pointer-events:none;z-index:0;
+  }
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:760px;margin:0 auto;padding:0 24px;position:relative;z-index:1;}
+  nav{position:sticky;top:0;z-index:10;background:rgba(10,15,26,0.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);}
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;max-width:760px;}
+  .back-link{font-family:'IBM Plex Mono',monospace;font-size:0.8rem;color:var(--text-dim);}
+  .back-link:hover{color:var(--copper);}
+  .nav-brand{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.95rem;}
+  .nav-brand .dot{color:var(--copper);}
+
+  header{padding:56px 0 40px;border-bottom:1px solid var(--border);}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--copper);letter-spacing:0.08em;margin-bottom:14px;}
+  h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(1.7rem,4.5vw,2.3rem);line-height:1.15;margin-bottom:16px;}
+  .lead{color:var(--text-dim);font-size:1.02rem;max-width:620px;margin-bottom:24px;}
+  .meta-row{display:flex;flex-wrap:wrap;gap:8px;}
+  .badge{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;border:1px solid var(--border);color:var(--text-dim);padding:5px 10px;border-radius:2px;background:var(--panel);}
+
+  main{padding:48px 0 80px;}
+  section{margin-bottom:56px;}
+  .section-tag{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--copper);letter-spacing:0.08em;margin-bottom:10px;display:block;}
+  h2{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1.25rem;margin-bottom:14px;}
+  p{color:var(--text-dim);margin-bottom:14px;max-width:640px;}
+  p strong{color:var(--text);font-weight:500;}
+
+  .step{
+    border:1px solid var(--border);background:var(--panel);border-radius:3px;
+    padding:20px 20px 0;margin-bottom:20px;overflow:hidden;
+  }
+  .step-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .step-num{font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--copper);border:1px solid var(--copper-dim);padding:2px 8px;border-radius:2px;}
+  .step h3{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:600;}
+  .step p{margin-bottom:14px;font-size:0.9rem;}
+  .step img{width:100%;border-radius:2px 2px 0 0;border-top:1px solid var(--border);display:block;}
+
+  .status-tag{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;padding:2px 8px;border-radius:2px;border:1px solid;display:inline-block;margin-bottom:10px;}
+  .status-tag.ok{color:var(--green);border-color:rgba(111,174,127,0.4);background:rgba(111,174,127,0.06);}
+  .status-tag.denied{color:var(--red);border-color:rgba(193,85,74,0.4);background:rgba(193,85,74,0.06);}
+  .status-tag.warn{color:var(--copper);border-color:rgba(214,138,60,0.4);background:rgba(214,138,60,0.08);}
+
+  .callout{
+    border-left:2px solid var(--copper);background:var(--panel-2);
+    padding:16px 20px;border-radius:0 3px 3px 0;margin-bottom:20px;
+  }
+  .callout p{margin-bottom:0;color:var(--text);font-size:0.92rem;}
+
+  .sandbox-notice{
+    border:1px dashed var(--text-faint);background:var(--panel-2);
+    padding:18px 20px;border-radius:3px;margin-bottom:20px;
+  }
+  .sandbox-notice .tag{
+    font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--text-dim);
+    letter-spacing:0.08em;display:flex;align-items:center;gap:6px;margin-bottom:10px;
+  }
+  .sandbox-notice p{margin-bottom:8px;font-size:0.9rem;}
+  .sandbox-notice p:last-child{margin-bottom:0;}
+
+  .prod-note{
+    border-left:2px solid var(--green);background:var(--panel-2);
+    padding:10px 14px;border-radius:0 3px 3px 0;margin-bottom:14px;
+  }
+  .prod-note strong{
+    font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--green);
+    letter-spacing:0.06em;display:block;margin-bottom:4px;
+  }
+  .prod-note p{margin-bottom:0;font-size:0.85rem;color:var(--text-dim);}
+
+  ul.takeaways{list-style:none;}
+  ul.takeaways li{
+    color:var(--text-dim);margin-bottom:12px;padding-left:20px;position:relative;font-size:0.94rem;max-width:620px;
+  }
+  ul.takeaways li::before{content:'—';position:absolute;left:0;color:var(--copper);}
+
+  footer{border-top:1px solid var(--border);padding:32px 0 60px;text-align:center;}
+  footer a{font-family:'IBM Plex Mono',monospace;font-size:0.8rem;color:var(--text-dim);}
+  footer a:hover{color:var(--copper);}
+
+  @media (max-width:640px){
+    .step{padding:16px 16px 0;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="back-link" href="index.html">← back to Azure projects</a>
+    <div class="nav-brand">terrencenails<span class="dot">.</span>log</div>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <span class="eyebrow">// AZURE PROJECTS</span>
+    <h1>Deploying a Windows Server VM in Azure</h1>
+    <p class="lead">Provisioned a Windows Server 2025 virtual machine through the Portal's creation wizard, then connected to it over RDP — end to end, from picking an image to landing on the desktop of a running server.</p>
+    <div class="meta-row">
+      <div class="badge">Azure</div>
+      <div class="badge">Virtual Machines</div>
+      <div class="badge">RDP</div>
+      <div class="badge">Windows Server</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+
+    <section>
+      <span class="section-tag">// OBJECTIVE</span>
+      <h2>Why this project</h2>
+      <p>Every other project in this portfolio builds around infrastructure that already exists — a VM gets configured, secured, or connected to. This one is the missing first step: standing up the compute resource itself, through the Portal's guided wizard rather than the CLI, and walking all the way through to an actual interactive session on the machine. It's also a useful baseline for what the Portal's defaults look like before anything gets hardened — several of which are flagged below as exactly the kind of shortcut that wouldn't survive a real security review.</p>
+    </section>
+
+    <section>
+      <span class="section-tag">// PROVISION</span>
+      <h2>Starting the creation wizard</h2>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">01</span><h3>Create a resource, from the Azure home page</h3></div>
+        <p>The Portal's home page surfaces <strong>Create a resource</strong> as the first tile under Azure services — the general entry point for provisioning anything in Azure, not just VMs. Starting here rather than jumping straight to a Virtual Machines blade keeps the habit of going through the same front door every resource type shares, useful once a subscription has more than one kind of resource to manage.</p>
+        <img src="assets/first-windows-vm/01-azure-home-create-resource.png" alt="Azure Portal home page with the Create a resource tile highlighted">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">02</span><h3>Select Virtual machine from the marketplace</h3></div>
+        <p>The marketplace's <strong>Popular Azure services</strong> list surfaces Virtual machine directly, alongside other common compute and app services. Selecting <em>Create</em> here launches the multi-tab VM creation wizard — Basics, Disks, Networking, Management, Monitoring, Advanced, Tags, and Review + create — each tab representing a distinct category of decision that goes into standing up a VM.</p>
+        <img src="assets/first-windows-vm/02-marketplace-virtual-machine-create.png" alt="Azure Marketplace Create a resource page with Virtual machine highlighted">
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// CONFIGURE</span>
+      <h2>Basics: identity, image, and size</h2>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">03</span><h3>Name the VM and pick an image</h3></div>
+        <p>Set the resource group, VM name (<code>vm-windows</code>), region (East US), and image (<strong>Windows Server 2025 Datacenter</strong>, Trusted launch, x64). Trusted launch — secure boot and a virtual TPM enabled by default on this image — is itself a meaningful default worth noting: it's a baseline integrity protection against boot-level rootkits and unauthorized firmware, and it's on without having to opt in.</p>
+        <img src="assets/first-windows-vm/03-basics-tab-name-region-image.png" alt="Create a virtual machine Basics tab with resource group, VM name, region, and Windows Server 2025 image highlighted">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">04</span><h3>Set the administrator account and inbound port</h3></div>
+        <p>Administrator username <code>azureuser</code> with a generated password (never displayed in this write-up), and <strong>Allow selected ports</strong> set to RDP (3389) under Public inbound ports. The Portal's own inline warning here is explicit: <em>"This will allow all IP addresses to access your virtual machine. This is only recommended for testing."</em> That's the Portal telling you, in the moment, exactly what the tradeoff is — worth reading rather than clicking past.</p>
+        <img src="assets/first-windows-vm/04-basics-tab-admin-account.png" alt="Create a virtual machine Basics tab with administrator username, password fields, and RDP inbound port setting highlighted">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">05</span><h3>Review the Networking tab's defaults</h3></div>
+        <p>A <strong>Basic</strong> NIC-level NSG is auto-created, with the same "allow selected ports" RDP rule carried over from Basics — meaning port 3389 is genuinely open to <code>0.0.0.0/0</code>, not just a Basics-tab suggestion. <strong>Delete public IP and NIC when VM is deleted</strong> is checked, a tidiness default that keeps a deleted VM from leaving orphaned networking resources billing quietly in the background.</p>
+        <img src="assets/first-windows-vm/05-networking-tab-nsg-rdp.png" alt="Create a virtual machine Networking tab showing Basic NIC NSG, RDP inbound port open to all IP addresses, and Delete public IP and NIC when VM is deleted checked">
+        <div class="prod-note">
+          <strong>IN PRODUCTION</strong>
+          <p>RDP would never be left open to the entire internet — the same least-privilege instinct as the scoped NSG rule in the VNet + NSG project. A real deployment would scope this to a known source range, put the VM behind Azure Bastion or a VPN with no public IP on the VM at all, or gate it behind Just-In-Time (JIT) VM access so the port only opens on an approved, time-limited request.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">06</span><h3>Review + create</h3></div>
+        <p>The Review + create tab restates every choice in one place — including the same RDP-open-to-the-internet warning surfaced a second time, directly above the Create button. Reading the full review before clicking Create, rather than tabbing straight to it, is the same "confirm before you commit" instinct as reviewing a <code>terraform plan</code> before <code>apply</code> — the last chance to catch a setting before it becomes a billable, running resource.</p>
+        <img src="assets/first-windows-vm/06-review-create-tab.png" alt="Create a virtual machine Review plus create tab showing pricing, the RDP port warning, and the Create button highlighted">
+      </div>
+
+      <div class="step">
+        <span class="status-tag ok" style="margin-top:20px;">✓ DEPLOYMENT SUCCEEDED</span>
+        <div class="step-head"><span class="step-num">07</span><h3>Deployment completes</h3></div>
+        <p>Azure Resource Manager confirms the deployment finished, along with a correlation ID for the operation — useful for tracing this specific deployment through Activity Log or support later, distinct from the resources it actually created.</p>
+        <img src="assets/first-windows-vm/07-deployment-complete.png" alt="Deployment overview page showing Your deployment is complete, with deployment name and next steps">
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// VERIFY</span>
+      <h2>Confirming what actually got created</h2>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">08</span><h3>Six resources, one VM</h3></div>
+        <p>The resource group shows the full footprint of what one VM creation actually provisions: the VM itself, a public IP, a network security group, a network interface, a managed disk, and a virtual network — six resources from a single wizard run. Checking the resource group after deployment, rather than assuming only the VM was created, is the same habit as confirming a Terraform plan's resource count matches expectations — a VM is never really "just a VM."</p>
+        <img src="assets/first-windows-vm/08-resource-group-overview.png" alt="Resource group overview listing the VM, public IP address, network security group, network interface, disk, and virtual network, with vm-windows highlighted">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">09</span><h3>Open the VM and start a connection</h3></div>
+        <p>From the VM's Overview page, <strong>Connect</strong> offers two paths: a direct <em>Connect</em> (native RDP) or <em>Connect via Bastion</em>, which proxies the session through Azure without ever exposing the VM's own public IP to the client. This project uses native RDP to keep the walkthrough to what the wizard set up by default — but Bastion is exactly the kind of change the production note above is describing.</p>
+        <img src="assets/first-windows-vm/09-vm-overview-connect.png" alt="vm-windows Overview page with the Connect dropdown open, showing Connect and Connect via Bastion options">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">10</span><h3>Native RDP connection details</h3></div>
+        <p>The Native RDP pane lays out both ends of the connection explicitly: the source machine's own detected public IP, and the destination VM's public IP and port (3389). Seeing both addresses side by side is a useful sanity check before connecting — confirming the VM actually has a public IP assigned and that it's reachable on the expected port, rather than discovering a networking problem only after a connection attempt times out.</p>
+        <img src="assets/first-windows-vm/10-native-rdp-blade.png" alt="Native RDP connection pane showing source machine IP, destination VM IP and port, and the Download RDP file button highlighted">
+      </div>
+
+      <div class="callout">
+        <p><strong>Result:</strong> a fully provisioned Windows Server VM, verified present alongside its supporting resources, with a ready RDP path confirmed before attempting to connect.</p>
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// CONNECT</span>
+      <h2>Connecting over RDP</h2>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">11</span><h3>Download the RDP file</h3></div>
+        <p>The <code>.rdp</code> file is a small text-based configuration file — just the target address, port, and a handful of display settings — that Remote Desktop Connection reads to know where and how to connect. Downloading it rather than typing the address by hand each time is standard practice once a VM is going to be connected to more than once.</p>
+        <img src="assets/first-windows-vm/11-rdp-file-downloaded.png" alt="Browser download notification confirming vm-windows.rdp completed">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">12</span><h3>Accept the certificate warning</h3></div>
+        <p>Remote Desktop Connection flags that the VM's certificate isn't from a trusted certifying authority — expected for a fresh VM using its self-signed default certificate rather than one issued by an internal or public CA. Confirming the certificate name matches the expected hostname (<code>vm-windows</code>) before clicking through is the actual check being performed here, not just dismissing a warning.</p>
+        <img src="assets/first-windows-vm/12-certificate-warning.png" alt="Remote Desktop Connection certificate warning dialog with Yes highlighted">
+      </div>
+
+      <div class="step">
+        <div class="step-head"><span class="step-num">13</span><h3>Authenticate as the administrator account</h3></div>
+        <p>Windows Security prompts for the <code>azureuser</code> credentials set during provisioning. This is the same credential pair created back in step 04 — nothing new generated here, just the first time it's actually used to authenticate.</p>
+        <img src="assets/first-windows-vm/13-windows-security-credentials.png" alt="Windows Security credential prompt for connecting to the VM, with azureuser and a masked password field">
+      </div>
+
+      <div class="step">
+        <span class="status-tag ok" style="margin-top:20px;">✓ CONNECTED</span>
+        <div class="step-head"><span class="step-num">14</span><h3>Landing on the desktop</h3></div>
+        <p>Server Manager opens automatically on login — the default first-run experience for Windows Server, surfacing quick-start actions, roles, and server groups. Reaching this screen is the actual proof the whole chain worked: the VM provisioned correctly, its network path was reachable, and the credentials set at creation time were valid.</p>
+        <img src="assets/first-windows-vm/14-server-manager-dashboard.png" alt="Server Manager Dashboard inside the RDP session, showing the Welcome to Server Manager quick start panel">
+      </div>
+
+      <div class="callout">
+        <p><strong>Result:</strong> an interactive session on a Windows Server VM that didn't exist twenty minutes earlier — provisioned, verified, and connected to end to end through the Portal.</p>
+      </div>
+    </section>
+
+    <section>
+      <span class="section-tag">// TAKEAWAYS</span>
+      <h2>What this demonstrates</h2>
+      <ul class="takeaways">
+        <li>A single VM creation wizard run provisions six distinct resources, not one — knowing that upfront is what makes a resource group's contents make sense later, rather than looking cluttered.</li>
+        <li>The Portal surfaces its own security tradeoffs in plain language, twice, before RDP is ever opened to the world — the wizard isn't hiding the shortcut, it's naming it. Reading those warnings instead of clicking past them is the whole point of a review step.</li>
+        <li>Native RDP and Bastion solve the same problem — reaching a VM's desktop — with a materially different exposure profile. Choosing native RDP here was about seeing the wizard's actual default end to end, not a recommendation to skip Bastion in practice.</li>
+      </ul>
+
+      <div class="sandbox-notice">
+        <span class="tag">⚠ SANDBOX ENVIRONMENT — NOT PRODUCTION</span>
+        <p>This project was conducted in a controlled sandbox environment. Real-world/production results and practices would differ — noted inline where relevant above.</p>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a href="index.html">← back to Azure projects</a>
+  </div>
+</footer>
+
+</body>
+</html>
