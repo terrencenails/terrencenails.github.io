@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IAM Least-Privilege Enforcement — Project Write-Up</title>
+<title>AWS IAM Access Control Validation — Project Write-Up</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -55,6 +55,7 @@
   .status-tag{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;padding:2px 8px;border-radius:2px;border:1px solid;display:inline-block;margin-bottom:10px;}
   .status-tag.ok{color:var(--green);border-color:rgba(111,174,127,0.4);background:rgba(111,174,127,0.06);}
   .status-tag.denied{color:var(--red);border-color:rgba(193,85,74,0.4);background:rgba(193,85,74,0.06);}
+  .status-tag.test{color:var(--copper);border-color:rgba(214,138,60,0.4);background:rgba(214,138,60,0.06);}
 
   .callout{
     border-left:2px solid var(--copper);background:var(--panel-2);
@@ -89,11 +90,11 @@
 <header>
   <div class="wrap">
     <span class="eyebrow">// AWS PROJECTS</span>
-    <h1>IAM Least-Privilege Enforcement: User, Group, and MFA Setup</h1>
-    <p class="lead">Provisioned an IAM user and group under a least-privilege model, enforced MFA, then logged in as the restricted user to verify the policy boundary actually held — not just that it looked right on paper.</p>
+    <h1>AWS IAM Access Control Validation: User, Group, MFA, and Permission Testing</h1>
+    <p class="lead">Provisioned an IAM user and group with intentionally different S3 and EC2 permission levels, configured virtual MFA for console sign-in, then authenticated as the test user to validate allowed and denied actions in practice.</p>
     <div class="meta-row">
       <div class="badge">AWS IAM</div>
-      <div class="badge">Least Privilege</div>
+      <div class="badge">Access Control</div>
       <div class="badge">MFA</div>
     </div>
   </div>
@@ -105,7 +106,10 @@
     <section>
       <span class="section-tag">// OBJECTIVE</span>
       <h2>Why this project</h2>
-      <p>Least-privilege access is easy to state as policy and easy to get wrong in practice — overly broad managed policies get attached "to keep things moving," and nobody finds out until an audit or an incident. This project builds a restricted IAM identity from scratch and then <strong>tests the boundary as the attacker or auditor would</strong>: sign in as that user and try to do something it shouldn't be able to do.</p>
+      <p>Access control is easy to describe on paper and easy to misconfigure in practice. This project builds a dedicated IAM identity with group-based AWS managed policies, then <strong>tests the resulting permissions as that user</strong> by performing actions that should succeed and actions that should be denied.</p>
+      <div class="callout">
+        <p><strong>Scope note:</strong> this lab intentionally uses <code>AmazonS3FullAccess</code> to contrast full S3 access with <code>AmazonEC2ReadOnlyAccess</code>. Because <code>AmazonS3FullAccess</code> is broader than a task-specific policy, this project demonstrates permission scoping and validation rather than a strict least-privilege implementation. A production least-privilege design would use a customer-managed policy limited to the exact S3 actions and resources required.</p>
+      </div>
     </section>
 
     <section>
@@ -132,157 +136,157 @@
 
       <div class="step">
         <div class="step-head"><span class="step-num">04</span><h3>Create the permissions group</h3></div>
-        <p>Rather than attaching policies to the user directly, created a group — <strong>DevGroup</strong> — and attached exactly two managed policies: <strong>AmazonS3FullAccess</strong> and <strong>AmazonEC2ReadOnlyAccess</strong>. The deliberate asymmetry is the point of the test: full access to one service, read-only to another.</p>
+        <p>Rather than attaching service permissions directly to the user, created <strong>DevGroup</strong> and selected two AWS managed policies: <strong>AmazonS3FullAccess</strong> and <strong>AmazonEC2ReadOnlyAccess</strong>. The screenshot is filtered to S3, so it visibly shows the S3 policy while the console indicates that two policies are selected; the later permissions screen confirms both are attached to the group.</p>
         <img src="assets/iam-lab/04-create-group-policies.png" alt="Naming the group DevGroup and attaching S3 and EC2 read-only policies">
       </div>
 
       <div class="step">
         <div class="step-head"><span class="step-num">05</span><h3>Group created</h3></div>
-        <p>Confirmed DevGroup existed with its policy set before attaching any user — verifying the permission boundary independent of identity.</p>
+        <p>Confirmed that DevGroup was created successfully before assigning Alexa. The group row shows that permissions are defined; the individual policy names are confirmed on the permissions screen in the next step.</p>
         <img src="assets/iam-lab/05-group-created.png" alt="DevGroup user group created confirmation">
       </div>
 
       <div class="step">
         <div class="step-head"><span class="step-num">06</span><h3>Attach user to group</h3></div>
-        <p>Added Alexa to DevGroup during user creation — inheriting the group's policy set rather than getting any standalone permissions.</p>
+        <p>Selected DevGroup for Alexa during user creation. The attached-policies column shows the S3 full-access and EC2 read-only policies, so Alexa receives those identity-based permissions through group membership rather than direct service-policy attachments.</p>
         <img src="assets/iam-lab/06-add-user-to-group.png" alt="Adding user to DevGroup during creation">
       </div>
 
       <div class="step">
         <div class="step-head"><span class="step-num">07</span><h3>Review before create</h3></div>
-        <p>Final review confirmed the only permissions in play were DevGroup's policies plus the default IAMUserChangePassword self-service policy — no surprise inherited access.</p>
+        <p>The review screen showed <strong>DevGroup</strong> plus the <strong>IAMUserChangePassword</strong> policy associated with this user-creation workflow. These are the identity-based permissions shown at creation time; AWS can also evaluate other applicable policy types when determining effective access, which is why the lab validates behavior directly later.</p>
         <img src="assets/iam-lab/07-review-create.png" alt="Review and create screen showing DevGroup and IAMUserChangePassword">
       </div>
 
       <div class="step">
         <div class="step-head"><span class="step-num">08</span><h3>Retrieve credentials</h3></div>
-        <p>Captured the one-time autogenerated password — AWS only surfaces this once, so it has to be recorded at creation time.</p>
+        <p>Retrieved the autogenerated console password and sign-in details. AWS marks this as the only time the generated password can be viewed or downloaded, so it must be captured securely at this stage.</p>
         <img src="assets/iam-lab/08-retrieve-password.png" alt="Retrieve password screen">
       </div>
 
       <div class="step">
         <div class="step-head"><span class="step-num">09</span><h3>User confirmed</h3></div>
-        <p>Alexa now shows in the Users list, bound to DevGroup, with no MFA yet — the next gap to close.</p>
+        <p>Alexa now appears in the Users list with one group membership and no MFA device configured yet — the next security control to add.</p>
         <img src="assets/iam-lab/09-user-created.png" alt="Users list showing Alexa">
       </div>
     </section>
 
     <section>
       <span class="section-tag">// BUILD</span>
-      <h2>Enforcing MFA</h2>
+      <h2>Configuring MFA for console sign-in</h2>
 
       <div class="step">
         <div class="step-head"><span class="step-num">10</span><h3>Flag console access without MFA</h3></div>
-        <p>The user's security credentials tab flagged console access as <strong>enabled without MFA</strong> — a real finding a security review would catch, so it got fixed rather than left as a known gap.</p>
+        <p>The user's security credentials page showed console access as <strong>enabled without MFA</strong> and no MFA device assigned, identifying a clear authentication gap to address.</p>
         <img src="assets/iam-lab/10-assign-mfa.png" alt="Security credentials tab showing console access enabled without MFA">
       </div>
 
       <div class="step">
         <div class="step-head"><span class="step-num">11</span><h3>Choose device type</h3></div>
-        <p>Selected an authenticator app as the MFA device type — no hardware token needed for this identity's use case.</p>
+        <p>Named the device and selected <strong>Authenticator app</strong> as the MFA device type for this test identity.</p>
         <img src="assets/iam-lab/11-mfa-device-type.png" alt="Selecting MFA device type as authenticator app">
       </div>
 
       <div class="step">
         <div class="step-head"><span class="step-num">12</span><h3>Bind the device</h3></div>
-        <p>Scanned the QR code into an authenticator app and confirmed with two consecutive codes, proving possession of the device rather than a single lucky code.</p>
-        <img src="assets/iam-lab/12-mfa-qr-setup.png" alt="Scanning QR code and entering two consecutive MFA codes">
+        <p>The virtual MFA setup screen prompted for a QR-code scan and two consecutive TOTP codes. I completed those prompts to associate and synchronize the authenticator app with the IAM user; the next screenshot confirms the device was successfully assigned.</p>
+        <img src="assets/iam-lab/12-mfa-qr-setup.png" alt="Authenticator app setup screen requesting a QR-code scan and two consecutive MFA codes">
       </div>
 
       <div class="step">
         <div class="step-head"><span class="step-num">13</span><h3>MFA active</h3></div>
-        <p>Console access now shows <strong>enabled with MFA</strong>, and the virtual device is listed under the user's security credentials.</p>
+        <p>The user summary now shows console access as <strong>enabled with MFA</strong>, and the virtual MFA device appears under the user's security credentials — confirming the device was successfully assigned.</p>
         <img src="assets/iam-lab/13-mfa-added.png" alt="MFA device assigned confirmation">
       </div>
     </section>
 
     <section>
       <span class="section-tag">// TEST</span>
-      <h2>Verifying the boundary as the restricted user</h2>
-      <p>This is the part most labs skip: after building the identity, signed <strong>out</strong> of the admin account and signed back <strong>in as Alexa</strong>, then deliberately tried both an allowed action and a disallowed one.</p>
+      <h2>Validating effective permissions as the test user</h2>
+      <p>After building the identity, signed <strong>out</strong> of the administrative session and signed back <strong>in as Alexa</strong>, then deliberately tested both permitted and non-permitted actions. These tests validate the behavior observed in this lab session; AWS evaluates all policies that apply to a request, not only group policies.</p>
 
       <div class="step">
-        <span class="status-tag ok" style="margin:20px 0 0 20px;">✓ ALLOWED</span>
+        <span class="status-tag ok" style="margin:20px 0 0 20px;">✓ VERIFIED</span>
         <div class="step-head" style="margin-left:20px;"><span class="step-num">14</span><h3>Signed in as Alexa</h3></div>
-        <p style="margin-left:20px;">Confirmed the session was running as the IAM user, not the account root or an admin identity — a clean baseline for the test.</p>
+        <p style="margin-left:20px;">The account menu identifies the active principal as IAM user <strong>Alexa</strong>, establishing that the following permission tests are being performed from the test-user session rather than the administrative identity. The separate <strong>Account color — Access denied</strong> message shown in this crop is an account-menu permission message, not a failed sign-in.</p>
         <img src="assets/iam-lab/14-signed-in-as-user.png" alt="Signed in as IAM user Alexa">
       </div>
 
       <div class="step">
         <span class="status-tag ok" style="margin:20px 0 0 20px;">✓ ALLOWED</span>
         <div class="step-head" style="margin-left:20px;"><span class="step-num">15</span><h3>Created an S3 bucket</h3></div>
-        <p style="margin-left:20px;">With AmazonS3FullAccess in the policy set, bucket creation succeeded without issue — confirming the group policy was actually applied to this identity's session.</p>
+        <p style="margin-left:20px;">Bucket creation succeeded while signed in as Alexa, demonstrating that the user had an effective allow for the required S3 bucket-creation action in this lab context.</p>
         <img src="assets/iam-lab/15-s3-bucket-created.png" alt="Successfully created S3 bucket as IAM user">
       </div>
 
       <div class="step">
-        <span class="status-tag denied" style="margin:20px 0 0 20px;">✕ DENIED</span>
-        <div class="step-head" style="margin-left:20px;"><span class="step-num">16</span><h3>Attempted to launch an EC2 instance</h3></div>
-        <p style="margin-left:20px;">Navigated to EC2 and attempted Launch Instance — the action a read-only identity should not be able to complete.</p>
+        <span class="status-tag test" style="margin:20px 0 0 20px;">→ TEST</span>
+        <div class="step-head" style="margin-left:20px;"><span class="step-num">16</span><h3>Begin the EC2 launch workflow</h3></div>
+        <p style="margin-left:20px;">Navigated to the EC2 Instances page and started the <strong>Launch instance</strong> workflow. This screenshot shows the start of the test; the authorization failure is captured in the following steps.</p>
         <img src="assets/iam-lab/16-launch-ec2.png" alt="Navigating to launch an EC2 instance">
       </div>
 
       <div class="step">
         <span class="status-tag denied" style="margin:20px 0 0 20px;">✕ DENIED</span>
         <div class="step-head" style="margin-left:20px;"><span class="step-num">17</span><h3>Key pair creation blocked</h3></div>
-        <p style="margin-left:20px;">AWS denied <code>ec2:CreateKeyPair</code> — the first sign the read-only policy was doing exactly what it was supposed to.</p>
+        <p style="margin-left:20px;">An attempt to create a new key pair was denied on <code>ec2:CreateKeyPair</code> because no identity-based policy allowed that action for Alexa.</p>
         <img src="assets/iam-lab/17-keypair-denied.png" alt="Access denied creating a key pair">
       </div>
 
       <div class="step">
         <span class="status-tag denied" style="margin:20px 0 0 20px;">✕ DENIED</span>
-        <div class="step-head" style="margin-left:20px;"><span class="step-num">18</span><h3>Instance launch denied</h3></div>
-        <p style="margin-left:20px;">The launch itself failed with <strong>"not authorized to perform ec2:CreateSecurityGroup"</strong> — the read-only policy correctly blocked every write action in the launch workflow, not just one.</p>
+        <div class="step-head" style="margin-left:20px;"><span class="step-num">18</span><h3>Launch workflow blocked at security-group creation</h3></div>
+        <p style="margin-left:20px;">The launch workflow failed when AWS attempted <code>ec2:CreateSecurityGroup</code>. The page shows the initialization step succeeded but security-group creation failed, preventing the workflow from completing. This confirms denial of <code>ec2:CreateSecurityGroup</code>; it does not by itself show a separate authorization decision for <code>ec2:RunInstances</code>.</p>
         <img src="assets/iam-lab/18-launch-denied.png" alt="EC2 instance launch failed due to insufficient permissions">
       </div>
 
       <div class="step">
         <span class="status-tag ok" style="margin:20px 0 0 20px;">✓ ALLOWED</span>
         <div class="step-head" style="margin-left:20px;"><span class="step-num">19</span><h3>Uploaded an object to the bucket</h3></div>
-        <p style="margin-left:20px;">Beyond just creating the bucket, uploaded an actual file into it — confirming S3 write access extends to object-level operations, not just bucket creation.</p>
+        <p style="margin-left:20px;">Uploaded a PDF object to the test bucket successfully, demonstrating effective S3 object-write access in addition to bucket creation.</p>
         <img src="assets/iam-lab/21-s3-upload-success.png" alt="Upload succeeded to S3 bucket">
       </div>
 
       <div class="step">
         <span class="status-tag ok" style="margin:20px 0 0 20px;">✓ ALLOWED</span>
         <div class="step-head" style="margin-left:20px;"><span class="step-num">20</span><h3>Object confirmed in bucket</h3></div>
-        <p style="margin-left:20px;">The uploaded file shows up in the bucket's object list — a full round trip on the S3 permission, not just a one-time success message.</p>
+        <p style="margin-left:20px;">The uploaded PDF appears in the bucket's object list, independently confirming that the object was stored successfully.</p>
         <img src="assets/iam-lab/22-s3-object-listed.png" alt="Uploaded file listed in S3 bucket objects">
       </div>
 
       <div class="step">
         <span class="status-tag denied" style="margin:20px 0 0 20px;">✕ DENIED</span>
         <div class="step-head" style="margin-left:20px;"><span class="step-num">21</span><h3>VPC creation blocked</h3></div>
-        <p style="margin-left:20px;">Tried a second, unrelated EC2 write action — creating a VPC. Denied on <code>ec2:CreateVpc</code>, showing the read-only boundary holds across the EC2 service broadly, not just for the instance-launch workflow specifically.</p>
+        <p style="margin-left:20px;">Attempted a separate EC2/VPC modification by creating a VPC. AWS denied <code>ec2:CreateVpc</code> because no identity-based policy allowed that action, providing another write test outside the instance-launch workflow.</p>
         <img src="assets/iam-lab/23-vpc-create-denied.png" alt="Error creating VPC due to insufficient permissions">
       </div>
 
       <div class="step">
         <span class="status-tag denied" style="margin:20px 0 0 20px;">✕ DENIED</span>
         <div class="step-head" style="margin-left:20px;"><span class="step-num">22</span><h3>Stopping running instances blocked</h3></div>
-        <p style="margin-left:20px;">Even against instances the account could already see (read access includes Describe/List actions), attempting <code>ec2:StopInstances</code> was denied — confirming read-only means read-only, with no accidental write access slipping through on existing resources.</p>
+        <p style="margin-left:20px;">Alexa could view the running instances through the read-only permissions, but attempting <code>ec2:StopInstances</code> was denied because no identity-based policy allowed that modification action.</p>
         <img src="assets/iam-lab/24-stop-instances-denied.png" alt="Failed to stop EC2 instances due to insufficient permissions">
       </div>
 
       <div class="callout">
-        <p><strong>Result:</strong> the policy boundary held under an actual attempt to cross it, not just in theory. S3 write access worked exactly as granted — bucket creation and object upload both succeeded — while every EC2 write action tested (launch, key pair, security group, VPC creation, stopping instances) was blocked, exactly as the read-only policy intended.</p>
+        <p><strong>Result:</strong> the S3 operations tested succeeded, while the EC2 modification attempts shown in this lab were denied. Key-pair creation, security-group creation during the launch workflow, VPC creation, and stopping existing instances were all blocked. The instance-launch workflow could not complete because <code>ec2:CreateSecurityGroup</code> was denied; the screenshot does not independently prove that <code>ec2:RunInstances</code> itself was evaluated.</p>
       </div>
     </section>
 
     <section>
       <span class="section-tag">// BONUS</span>
       <h2>Provisioning a second user via CLI (CloudShell)</h2>
-      <p>To confirm the same IAM operations work outside the console — useful for scripting or automation — repeated user creation through AWS CloudShell instead of the web UI.</p>
+      <p>To demonstrate IAM resource creation from the command line, used AWS CloudShell to create a second IAM user resource. This is intentionally narrower than the earlier console workflow: <code>create-user</code> creates the IAM user object only; console credentials, group membership, permissions, and MFA require separate configuration.</p>
 
       <div class="step">
-        <div class="step-head"><span class="step-num">23</span><h3>Open CloudShell</h3></div>
-        <p>Searched for and launched CloudShell, a browser-based shell with the AWS CLI pre-authenticated to the current account.</p>
+        <div class="step-head"><span class="step-num">23</span><h3>Locate CloudShell</h3></div>
+        <p>Searched for AWS CloudShell from the console. CloudShell is a browser-based shell with AWS CLI installed, and it makes the credentials from the active console session available automatically so separate CLI credential configuration is not required.</p>
         <img src="assets/iam-lab/19-search-cloudshell.png" alt="Searching for CloudShell in AWS console">
       </div>
 
       <div class="step">
-        <div class="step-head"><span class="step-num">24</span><h3>Create a user with one command</h3></div>
-        <p>Ran <code>aws iam create-user --user-name Siri</code> — the same result as the console wizard, but scriptable and repeatable, which matters at any scale beyond a handful of users.</p>
+        <div class="step-head"><span class="step-num">24</span><h3>Create the IAM user resource with one command</h3></div>
+        <p>Ran <code>aws iam create-user --user-name Siri</code>. The command created the IAM user resource and returned its user name, user ID, ARN, and creation timestamp. It did <strong>not</strong> create a console password, add Siri to DevGroup, attach permissions, or configure MFA; those are separate IAM operations.</p>
         <img src="assets/iam-lab/20-cli-create-user.png" alt="aws iam create-user command output creating user Siri">
       </div>
     </section>
@@ -291,11 +295,11 @@
       <span class="section-tag">// TAKEAWAYS</span>
       <h2>What this demonstrates</h2>
       <ul class="takeaways">
-        <li>Group-based policy assignment (rather than attaching policies to individual users) keeps permissions auditable and consistent — DevGroup's policy set is the single source of truth for anyone added to it.</li>
-        <li>MFA gaps are easy to create silently — AWS surfaced the "enabled without MFA" warning automatically, which is exactly the kind of finding a thorough access review should catch before it becomes an incident.</li>
-        <li>Least privilege isn't proven by reading a policy document — it's proven by attempting the disallowed action and watching it fail, repeatedly, across different services and operations (launch, key pair, security group, VPC, stop). That's the difference between <em>documented</em> access control and <em>verified</em> access control.</li>
-        <li>Asymmetric access (full on one service, read-only on another) is a realistic enterprise pattern — e.g., a developer who needs to manage application storage but should never be able to spin up, tear down, or stop compute.</li>
-        <li>The same IAM operations are available through the CLI/CloudShell as through the console — worth knowing early, since real environments manage identity at scale through scripts and infrastructure-as-code, not click-through wizards.</li>
+        <li>Group-based policy assignment centralizes shared identity-based permissions and makes them easier to manage consistently across users. Effective access can still be influenced by other applicable policy types, such as resource-based policies, permissions boundaries, session policies, and AWS Organizations policies.</li>
+        <li>Virtual MFA adds a second factor to the IAM user's console sign-in. Requiring MFA for specific API or CLI actions is a separate authorization design that can be implemented with MFA-aware policy conditions and temporary credentials.</li>
+        <li>Policy intent should be validated with real authorization tests. In this lab, successful S3 actions and denied EC2 modification attempts demonstrated the effective behavior of the test identity rather than relying only on policy names.</li>
+        <li>The lab intentionally uses asymmetric access — broad S3 access and read-only EC2 access — to make permission differences easy to observe. For a production least-privilege design, the S3 side should be narrowed to only the required actions and bucket/object ARNs.</li>
+        <li>The console and CLI both interact with IAM, but each CLI command performs a specific operation. <code>aws iam create-user</code> creates the user resource only; additional commands or infrastructure-as-code are needed to configure credentials, group membership, permissions, and MFA.</li>
       </ul>
     </section>
 
