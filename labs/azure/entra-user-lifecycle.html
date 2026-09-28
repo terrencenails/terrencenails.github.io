@@ -108,32 +108,32 @@
   <div class="step">
     <div class="step-head"><span class="step-num">02</span><h3>Start creating a new user</h3></div>
     <p>From the Microsoft Entra ID Overview page, opened <strong>+ Add</strong>, selected <strong>User</strong>, and then selected <strong>Create new user</strong>.</p>
-    <img src="assets/entra-user-lifecycle/02-add-create-user.png" alt="Microsoft Entra ID Overview page with Add, User, and Create new user menus open">
+    <img src="assets/entra-user-lifecycle/03-create-user-dropdown.png" alt="Microsoft Entra ID Overview page with Add, User, and Create new user menus open">
   </div>
 
   <div class="step">
     <div class="step-head"><span class="step-num">03</span><h3>Create RP One</h3></div>
     <p>Entered <code>rp.one</code> as the user principal name and <strong>RP One</strong> as the display name. The password was left on auto-generate, then <strong>Review + create</strong> was selected before creating the account.</p>
-    <img src="assets/entra-user-lifecycle/03-create-rp-one.png" alt="Create new user page showing rp.one as the user principal name and RP One as the display name">
+    <img src="assets/entra-user-lifecycle/04-create-rp-one.png" alt="Create new user page showing rp.one as the user principal name and RP One as the display name">
   </div>
 
   <div class="step">
     <div class="step-head"><span class="step-num">04</span><h3>Create RP Two</h3></div>
     <p>Repeated the same process for <code>rp.two</code> with the display name <strong>RP Two</strong>.</p>
-    <img src="assets/entra-user-lifecycle/04-create-rp-two.png" alt="Create new user page showing rp.two and RP Two">
+    <img src="assets/entra-user-lifecycle/05-create-rp-two.png" alt="Create new user page showing rp.two and RP Two">
   </div>
 
   <div class="step">
     <div class="step-head"><span class="step-num">05</span><h3>Create RP Three</h3></div>
     <p>Created the third test account using <code>rp.three</code> with the display name <strong>RP Three</strong>.</p>
-    <img src="assets/entra-user-lifecycle/05-create-rp-three.png" alt="Create new user page showing rp.three and RP Three">
+    <img src="assets/entra-user-lifecycle/06-create-rp-three.png" alt="Create new user page showing rp.three and RP Three">
   </div>
 
   <div class="step">
     <span class="status-tag ok" style="margin-top:20px;">✓ VERIFIED</span>
     <div class="step-head"><span class="step-num">06</span><h3>Verify all three users</h3></div>
     <p>Expanded <strong>Manage</strong>, opened <strong>Users</strong>, and verified that <strong>RP One</strong>, <strong>RP Two</strong>, and <strong>RP Three</strong> appeared in the user list. The page may require a manual refresh before newly created directory objects appear.</p>
-    <img src="assets/entra-user-lifecycle/06-users-list-all-three.png" alt="Microsoft Entra ID Users page showing RP One, RP Two, and RP Three">
+    <img src="assets/entra-user-lifecycle/07-users-list-all-three.png" alt="Microsoft Entra ID Users page showing RP One, RP Two, and RP Three">
   </div>
 
   <div class="callout"><p><strong>Result:</strong> three test Member accounts were created and verified in Microsoft Entra ID before moving on to account modification.</p></div>
@@ -146,25 +146,25 @@
   <div class="step">
     <div class="step-head"><span class="step-num">07</span><h3>Open RP One</h3></div>
     <p>Selected <strong>RP One</strong> from the Users list and reviewed the account Overview page and the available user-management options.</p>
-    <img src="assets/entra-user-lifecycle/07-rp-one-overview.png" alt="RP One Overview page showing the account and management options">
+    <img src="assets/entra-user-lifecycle/08-rp-one-overview.png" alt="RP One Overview page showing the account and management options">
   </div>
 
   <div class="step">
     <div class="step-head"><span class="step-num">08</span><h3>Open Edit properties</h3></div>
     <p>From the toolbar at the top of the account Overview page, selected <strong>Edit properties</strong>.</p>
-    <img src="assets/entra-user-lifecycle/08-edit-properties-click.png" alt="RP One Overview page with Edit properties highlighted">
+    <img src="assets/entra-user-lifecycle/09-edit-properties-click.png" alt="RP One Overview page with Edit properties highlighted">
   </div>
 
   <div class="step">
     <div class="step-head"><span class="step-num">09</span><h3>Update identity fields</h3></div>
     <p>On the <strong>Identity</strong> tab, set <strong>First name</strong> to <code>RP</code> and <strong>Last name</strong> to <code>One</code>. These are separate directory attributes from the display name.</p>
-    <img src="assets/entra-user-lifecycle/09-identity-tab.png" alt="RP One Identity properties showing first name RP and last name One">
+    <img src="assets/entra-user-lifecycle/10-identity-tab.png" alt="RP One Identity properties showing first name RP and last name One">
   </div>
 
   <div class="step">
     <div class="step-head"><span class="step-num">10</span><h3>Update job information and save</h3></div>
     <p>On the <strong>Job Information</strong> tab, set <strong>Job title</strong> to <code>Helpdesk Technician</code> and <strong>Department</strong> to <code>IT Helpdesk</code>, then selected <strong>Save</strong>.</p>
-    <img src="assets/entra-user-lifecycle/10-job-information-tab.png" alt="RP One Job Information tab showing Helpdesk Technician, IT Helpdesk, and the Save button">
+    <img src="assets/entra-user-lifecycle/11-job-information-tab.png" alt="RP One Job Information tab showing Helpdesk Technician, IT Helpdesk, and the Save button">
     <div class="prod-note">
       <strong>IN PRODUCTION</strong>
       <p>Identity attributes are commonly sourced from an authoritative HR or identity system rather than maintained manually. Attributes such as department and job title can also be used in dynamic group membership rules.</p>
@@ -174,20 +174,20 @@
   <div class="step">
     <div class="step-head"><span class="step-num">11</span><h3>Open Reset password</h3></div>
     <p>Returned to the account Overview page and selected <strong>Reset password</strong> from the toolbar.</p>
-    <img src="assets/entra-user-lifecycle/11-reset-password-menu.png" alt="RP One Overview page with Reset password highlighted">
+    <img src="assets/entra-user-lifecycle/12-reset-password-menu.png" alt="RP One Overview page with Reset password highlighted">
   </div>
 
   <div class="step">
     <div class="step-head"><span class="step-num">12</span><h3>Confirm the password reset</h3></div>
     <p>The reset pane identified <code>rp.one@radlabs3p.onmicrosoft.com</code> and stated that the account would receive a temporary password that must be changed at the next sign-in. Selected <strong>Reset password</strong> to continue.</p>
-    <img src="assets/entra-user-lifecycle/12-reset-password-confirm.png" alt="Reset password pane for RP One explaining that a temporary password must be changed at next sign-in">
+    <img src="assets/entra-user-lifecycle/13-reset-password-confirm.png" alt="Reset password pane for RP One explaining that a temporary password must be changed at next sign-in">
   </div>
 
   <div class="step">
     <span class="status-tag ok" style="margin-top:20px;">✓ RESET COMPLETE</span>
     <div class="step-head"><span class="step-num">13</span><h3>Record the temporary password</h3></div>
     <p>The reset completed successfully and the Portal displayed the temporary password. The password was redacted in the screenshot and would need to be provided to the intended user through an appropriate verified channel.</p>
-    <img src="assets/entra-user-lifecycle/13-reset-password-result.png" alt="Reset password success pane with temporary password redacted">
+    <img src="assets/entra-user-lifecycle/14-reset-password-result.png" alt="Reset password success pane with temporary password redacted">
     <div class="prod-note">
       <strong>IN PRODUCTION</strong>
       <p>Where self-service password reset is enabled and users are appropriately registered, many routine password resets can be completed without an administrator handling a temporary credential.</p>
@@ -204,7 +204,7 @@
   <div class="step">
     <div class="step-head"><span class="step-num">14</span><h3>Locate Revoke sessions</h3></div>
     <p>While still in RP One's profile, returned to the Overview page and located <strong>Revoke sessions</strong> in the toolbar. This is the control used to begin revoking the user's Microsoft Entra session state and refresh tokens when fresh authentication is required.</p>
-    <img src="assets/entra-user-lifecycle/14-revoke-sessions.png" alt="RP One Overview page showing the Revoke sessions action in the toolbar">
+    <img src="assets/entra-user-lifecycle/15-revoke-sessions.png" alt="RP One Overview page showing the Revoke sessions action in the toolbar">
     <div class="prod-note">
       <strong>TECHNICAL NOTE</strong>
       <p>Revoking sessions should not be described as an instantaneous guarantee that every application session disappears. Existing access tokens and application-controlled cookies can remain usable until they expire or are reevaluated.</p>
