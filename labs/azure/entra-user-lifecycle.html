@@ -202,22 +202,16 @@
   <h2>Revoke access to a Microsoft Entra ID user account</h2>
 
   <div class="step">
-    <div class="step-head"><span class="step-num">14</span><h3>Open Revoke sessions</h3></div>
-    <p>While still in RP One's profile, selected <strong>Revoke sessions</strong> from the toolbar. This action is used to invalidate the user's Microsoft Entra sign-in session state and refresh tokens so fresh authentication is required when applications next need new tokens.</p>
-    <img src="assets/entra-user-lifecycle/14-revoke-sessions.png" alt="RP One Overview page with Revoke sessions highlighted">
-  </div>
-
-  <div class="step">
-    <div class="step-head"><span class="step-num">15</span><h3>Confirm session revocation</h3></div>
-    <p>In the <strong>Do you want to revoke all sessions for the user?</strong> prompt, selected <strong>Yes</strong> to confirm the action.</p>
-    <div class="pending">SCREENSHOT NEEDED — capture the revoke-sessions confirmation prompt with “Yes” visible, and preferably the success notification after confirmation.</div>
+    <div class="step-head"><span class="step-num">14</span><h3>Locate Revoke sessions</h3></div>
+    <p>While still in RP One's profile, returned to the Overview page and located <strong>Revoke sessions</strong> in the toolbar. This is the control used to begin revoking the user's Microsoft Entra session state and refresh tokens when fresh authentication is required.</p>
+    <img src="assets/entra-user-lifecycle/14-revoke-sessions.png" alt="RP One Overview page showing the Revoke sessions action in the toolbar">
     <div class="prod-note">
       <strong>TECHNICAL NOTE</strong>
-      <p>Session revocation should not be described as an instantaneous guarantee that every application session disappears. Existing access tokens and application-controlled cookies can remain usable until they expire or are reevaluated.</p>
+      <p>Revoking sessions should not be described as an instantaneous guarantee that every application session disappears. Existing access tokens and application-controlled cookies can remain usable until they expire or are reevaluated.</p>
     </div>
   </div>
 
-  <div class="callout"><p><strong>Result:</strong> the Entra session-revocation action was confirmed for RP One. In an incident-response scenario, this would be combined with credential changes and investigation rather than treated as a complete remediation by itself.</p></div>
+  <div class="callout"><p><strong>Result:</strong> the account lifecycle workflow reached the session-revocation control for RP One. In an incident-response scenario, session revocation would normally be combined with credential changes and investigation rather than treated as a complete remediation by itself.</p></div>
 </section>
 
 <section>
