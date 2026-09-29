@@ -27,21 +27,18 @@
   .back-link:hover{color:var(--copper);}
   .nav-brand{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.95rem;}
   .nav-brand .dot{color:var(--copper);}
-
   header{padding:56px 0 40px;border-bottom:1px solid var(--border);}
   .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--copper);letter-spacing:0.08em;margin-bottom:14px;}
   h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(1.7rem,4.5vw,2.3rem);line-height:1.15;margin-bottom:16px;}
   .lead{color:var(--text-dim);font-size:1.02rem;max-width:620px;margin-bottom:24px;}
   .meta-row{display:flex;flex-wrap:wrap;gap:8px;}
   .badge{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;border:1px solid var(--border);color:var(--text-dim);padding:5px 10px;border-radius:2px;background:var(--panel);}
-
   main{padding:48px 0 80px;}
   section{margin-bottom:56px;}
   .section-tag{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--copper);letter-spacing:0.08em;margin-bottom:10px;display:block;}
   h2{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1.25rem;margin-bottom:14px;}
   p{color:var(--text-dim);margin-bottom:14px;max-width:640px;}
   p strong{color:var(--text);font-weight:500;}
-
   .step{
     border:1px solid var(--border);background:var(--panel);border-radius:3px;
     padding:20px 20px 0;margin-bottom:20px;overflow:hidden;
@@ -51,12 +48,10 @@
   .step h3{font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:600;}
   .step p{margin-bottom:14px;font-size:0.9rem;}
   .step img{width:100%;border-radius:2px 2px 0 0;border-top:1px solid var(--border);display:block;}
-
   .status-tag{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;padding:2px 8px;border-radius:2px;border:1px solid;display:inline-block;margin-bottom:10px;}
   .status-tag.ok{color:var(--green);border-color:rgba(111,174,127,0.4);background:rgba(111,174,127,0.06);}
   .status-tag.denied{color:var(--red);border-color:rgba(193,85,74,0.4);background:rgba(193,85,74,0.06);}
   .status-tag.warn{color:var(--copper);border-color:rgba(214,138,60,0.4);background:rgba(214,138,60,0.08);}
-
   .callout{
     border-left:2px solid var(--copper);background:var(--panel-2);
     padding:16px 20px;border-radius:0 3px 3px 0;margin-bottom:20px;
@@ -68,7 +63,6 @@
     color:var(--text-dim);margin-bottom:12px;padding-left:20px;position:relative;font-size:0.94rem;max-width:620px;
   }
   ul.takeaways li::before{content:'—';position:absolute;left:0;color:var(--copper);}
-
   footer{border-top:1px solid var(--border);padding:32px 0 60px;text-align:center;}
   footer a{font-family:'IBM Plex Mono',monospace;font-size:0.8rem;color:var(--text-dim);}
   footer a:hover{color:var(--copper);}
@@ -91,7 +85,7 @@
   <div class="wrap">
     <span class="eyebrow">// NETWORK SECURITY PROJECTS</span>
     <h1>Upgrading the GRE Tunnel to Dynamic Routing with OSPF</h1>
-    <p class="lead">Took the GRE tunnel from the previous project and replaced its hand-configured static routes with OSPF — including a wildcard mask left broader than it needed to be, and why that turned out not to matter as much as expected.</p>
+    <p class="lead">Took the GRE tunnel from the previous project and replaced its hand-configured static routes with OSPF. This run also retained a broader-than-necessary wildcard mask on Router1 so I could document why it still worked in this topology — and why I would tighten it in a production environment.</p>
     <div class="meta-row">
       <div class="badge">OSPF</div>
       <div class="badge">GRE</div>
@@ -114,15 +108,15 @@
       <h2>Removing the static routes and starting OSPF</h2>
 
       <div class="step">
-        <div class="step-head"><span class="step-num">01</span><h3>Remove Router3's static route</h3></div>
-        <p>Deleted the static route to Router1's LAN and started <code>router ospf 1</code> — clearing the old mechanism before introducing the new one, rather than letting both run at once and masking a misconfiguration.</p>
-        <img src="assets/gre-ospf/01-r3-remove-static-start-ospf.png" alt="Router3 removing static route and starting OSPF process">
+        <div class="step-head"><span class="step-num">01</span><h3>Remove Router1's static route</h3></div>
+        <p>Removed Router1's static route to <code>10.10.30.0/24</code> and started <code>router ospf 1</code>. This clears the manually configured route before introducing OSPF as the new routing mechanism.</p>
+        <img src="assets/gre-ospf/02-r1-remove-static-start-ospf.png" alt="Router1 removing static route and starting OSPF process">
       </div>
 
       <div class="step">
-        <div class="step-head"><span class="step-num">02</span><h3>Remove Router1's static route</h3></div>
-        <p>The mirrored cleanup on Router1 — static route removed, OSPF process started.</p>
-        <img src="assets/gre-ospf/02-r1-remove-static-start-ospf.png" alt="Router1 removing static route and starting OSPF process">
+        <div class="step-head"><span class="step-num">02</span><h3>Remove Router3's static route</h3></div>
+        <p>Performed the mirrored cleanup on Router3 by removing its static route to <code>10.10.10.0/24</code> and starting OSPF process 1.</p>
+        <img src="assets/gre-ospf/01-r3-remove-static-start-ospf.png" alt="Router3 removing static route and starting OSPF process">
       </div>
     </section>
 
@@ -132,16 +126,16 @@
 
       <div class="step">
         <span class="status-tag ok" style="margin-top:20px;">✓ ADJACENCY FULL</span>
-        <div class="step-head"><span class="step-num">03</span><h3>Router3 advertises the tunnel network</h3></div>
-        <p>Added <code>network 192.168.0.0 0.0.0.3 area 0</code> — the tunnel's own transit network — which immediately triggers an OSPF adjacency with Router1, reaching <strong>FULL</strong> state.</p>
-        <img src="assets/gre-ospf/03-r3-advertise-tunnel-adjacency-full.png" alt="Router3 advertising tunnel network, OSPF adjacency reaching FULL">
+        <div class="step-head"><span class="step-num">03</span><h3>Router1 advertises the tunnel network</h3></div>
+        <p>Added <code>network 192.168.0.0 0.0.0.3 area 0</code> on Router1 so OSPF runs on Tunnel0. The captured output shows the neighbor relationship reaching <strong>FULL</strong> once both tunnel endpoints are participating in OSPF.</p>
+        <img src="assets/gre-ospf/04-r1-advertise-tunnel-adjacency-full.png" alt="Router1 advertising tunnel network, OSPF adjacency reaching FULL">
       </div>
 
       <div class="step">
         <span class="status-tag ok" style="margin-top:20px;">✓ ADJACENCY FULL</span>
-        <div class="step-head"><span class="step-num">04</span><h3>Router1 advertises the tunnel network</h3></div>
-        <p>The same statement on Router1 confirms the adjacency from its side — both routers now agree they're OSPF neighbors across the tunnel.</p>
-        <img src="assets/gre-ospf/04-r1-advertise-tunnel-adjacency-full.png" alt="Router1 advertising tunnel network, OSPF adjacency reaching FULL">
+        <div class="step-head"><span class="step-num">04</span><h3>Router3 advertises the tunnel network</h3></div>
+        <p>Applied the same tunnel-network statement on Router3. With both Tunnel0 interfaces participating in area 0, Router1 and Router3 form an OSPF neighbor relationship across the GRE tunnel.</p>
+        <img src="assets/gre-ospf/03-r3-advertise-tunnel-adjacency-full.png" alt="Router3 advertising tunnel network, OSPF adjacency reaching FULL">
       </div>
     </section>
 
@@ -152,7 +146,7 @@
       <div class="step">
         <span class="status-tag denied" style="margin-top:20px;">✕ UNREACHABLE</span>
         <div class="step-head"><span class="step-num">05</span><h3>Ping still fails — 0% success</h3></div>
-        <p>Even with a full OSPF adjacency between the two routers, pinging across to the remote LAN fails completely. The routers agree they're neighbors, but neither has told OSPF about its actual LAN yet — an adjacency alone doesn't create routes to networks that were never advertised.</p>
+        <p>Even with a FULL OSPF adjacency between the two routers, pinging the remote LAN still fails. The neighbor relationship is established, but neither LAN prefix has been included in OSPF yet, so the routers still do not have routes to those remote LANs.</p>
         <img src="assets/gre-ospf/05-ping-fails-adjacency-up-no-lan-route.png" alt="Ping failing at 0 percent despite OSPF adjacency being up">
       </div>
     </section>
@@ -162,16 +156,18 @@
       <h2>Advertising the LANs</h2>
 
       <div class="step">
-        <span class="status-tag warn" style="margin-top:20px;">⚠ BROADER THAN NEEDED</span>
-        <div class="step-head"><span class="step-num">06</span><h3>Router1 advertises its LAN with an oversized wildcard mask</h3></div>
-        <p>Advertised Router1's LAN with <code>network 10.10.10.0 0.255.255.255 area 0</code> — a wildcard mask far wider than the /24 actually in use. OSPF accepted it without complaint and connectivity still worked, because OSPF advertises the interface's <em>actual configured subnet</em>, not the mask in the network statement itself — the statement only decides which interfaces get pulled into the process. Still worth tightening in a real deployment: a mask this broad would match <em>any</em> interface on the router starting with <code>10.</code>, which could pull an unintended interface into OSPF later without anyone noticing.</p>
-        <img src="assets/gre-ospf/06-r1-broad-wildcard-mask.png" alt="Router1 OSPF network statement with an oversized wildcard mask">
+        <span class="status-tag warn" style="margin-top:20px;">⚠ BROAD MATCH</span>
+        <div class="step-head"><span class="step-num">06</span><h3>Router1 advertises its LAN with a broad wildcard mask</h3></div>
+        <p>Router1 uses <code>network 10.10.10.0 0.255.255.255 area 0</code>. The wildcard mask is broader than the <code>0.0.0.255</code> normally used to target only the <code>10.10.10.0/24</code> range. With <code>0.255.255.255</code>, only the first octet must match, so the statement can match any Router1 interface whose address begins with <code>10.</code>.</p>
+        <p>It still works in this lab because Router1's only matching <code>10.x.x.x</code> interface is the LAN interface at <code>10.10.10.1/24</code>. OSPF enables itself on the matching interface and advertises that interface's actual connected prefix; the wildcard mask in the <code>network</code> statement does not change the interface's configured subnet into a /8.</p>
+        <p>In a larger environment I would tighten this to <code>network 10.10.10.0 0.0.0.255 area 0</code>, because the broader match could unintentionally enable OSPF on another <code>10.x.x.x</code> interface added later.</p>
+        <img src="assets/gre-ospf/06-r1-broad-wildcard-mask.png" alt="Router1 OSPF network statement using a broad wildcard mask">
       </div>
 
       <div class="step">
-        <div class="step-head"><span class="step-num">07</span><h3>Router3 advertises its LAN correctly</h3></div>
-        <p>Added Router3's LAN to OSPF with a mask that matches the /24 exactly — <code>0.0.0.255</code> — the tighter, more deliberate version of the same command.</p>
-        <img src="assets/gre-ospf/07-r3-advertise-lan-correct-mask.png" alt="Router3 advertising its LAN into OSPF with the correct wildcard mask">
+        <div class="step-head"><span class="step-num">07</span><h3>Router3 advertises its LAN with a /24 match</h3></div>
+        <p>Added Router3's LAN to OSPF using <code>network 10.10.30.0 0.0.0.255 area 0</code>, which deliberately matches the <code>10.10.30.0/24</code> LAN interface.</p>
+        <img src="assets/gre-ospf/07-r3-advertise-lan-correct-mask.png" alt="Router3 advertising its LAN into OSPF with a /24 wildcard mask">
       </div>
     </section>
 
@@ -182,25 +178,25 @@
       <div class="step">
         <span class="status-tag ok" style="margin-top:20px;">✓ REACHABLE</span>
         <div class="step-head"><span class="step-num">08</span><h3>Router3 reaches Router1's LAN</h3></div>
-        <p>100% success — the route is now learned dynamically, not typed in by hand.</p>
+        <p>100% success — Router3 can now reach Router1's LAN after the LAN prefixes are included in OSPF.</p>
         <img src="assets/gre-ospf/08-r3-ping-r1-lan-success.png" alt="Router3 successfully pinging Router1's LAN">
       </div>
 
       <div class="step">
         <span class="status-tag ok" style="margin-top:20px;">✓ REACHABLE</span>
         <div class="step-head"><span class="step-num">09</span><h3>Router1 reaches Router3's LAN</h3></div>
-        <p>Same result in the other direction — full connectivity restored, this time via OSPF instead of static routes.</p>
+        <p>The reverse test succeeds as well, confirming connectivity in both directions with routing supplied by OSPF instead of the previous static routes.</p>
         <img src="assets/gre-ospf/09-r1-ping-r3-lan-success.png" alt="Router1 successfully pinging Router3's LAN">
       </div>
 
       <div class="step">
         <div class="step-head"><span class="step-num">10</span><h3>Confirm the route is dynamic</h3></div>
-        <p>Router3's routing table now shows Router1's LAN with an <strong>O</strong> (OSPF) code instead of the <strong>S</strong> (static) code from the previous project — clear proof the route is being learned, not manually maintained, along with its OSPF cost and the interface it arrived on.</p>
+        <p>Router3's routing table shows Router1's LAN with an <strong>O</strong> (OSPF) code instead of the <strong>S</strong> (static) code from the previous project. That confirms the remote LAN route is being learned through OSPF over Tunnel0 rather than maintained as a manual static route.</p>
         <img src="assets/gre-ospf/10-r3-show-ip-route-ospf.png" alt="Router3 routing table showing OSPF-learned route via Tunnel0">
       </div>
 
       <div class="callout">
-        <p><strong>Result:</strong> the same two LANs from the original tunnel project are reachable again — but this time through a route OSPF discovered on its own. Getting there took two adjacent but distinct steps: bringing up the OSPF adjacency itself (via the tunnel network), then separately advertising each LAN — a full adjacency alone didn't produce a single usable route until that second step happened.</p>
+        <p><strong>Result:</strong> the two LANs are reachable again, but this time through routes learned dynamically with OSPF. The lab also demonstrates that forming a FULL OSPF adjacency and advertising the LAN prefixes are separate requirements: the routers became neighbors across Tunnel0 before they actually learned each other's LAN routes.</p>
       </div>
     </section>
 
@@ -208,10 +204,10 @@
       <span class="section-tag">// TAKEAWAYS</span>
       <h2>What this demonstrates</h2>
       <ul class="takeaways">
-        <li>An OSPF adjacency reaching FULL only means two routers have synchronized their link-state databases — it says nothing about which networks are actually being advertised. Routes still depend on separate <code>network</code> statements for each LAN.</li>
-        <li>OSPF's <code>network</code> statement wildcard mask controls which interfaces are pulled into the process — it does not redefine the subnet that gets advertised. That's why a mask far broader than intended can still "work," even though it's a real anti-pattern worth tightening, since it could unintentionally enable OSPF on other interfaces later.</li>
-        <li>Testing after every configuration change — even ones that technically succeeded — is what surfaces gaps like "adjacency up, but still can't ping." Assuming success from a clean CLI output would have missed it.</li>
-        <li>Comparing the route code in the routing table (S for static vs. O for OSPF) is a fast, reliable way to confirm which mechanism is actually responsible for a route — useful anytime a network is migrating from static to dynamic routing rather than starting from scratch.</li>
+        <li>A FULL OSPF adjacency confirms that the neighbors completed database exchange, but it does not guarantee that a specific LAN prefix has been included in OSPF. The relevant interfaces still have to participate before the remote router can learn those routes.</li>
+        <li>OSPF's <code>network</code> statement wildcard mask selects matching interface addresses; it does not redefine the subnet configured on those interfaces. That is why Router1's broader <code>0.255.255.255</code> match still works here, while also creating unnecessary scope that could include other <code>10.x.x.x</code> interfaces later.</li>
+        <li>Testing after each configuration change surfaces gaps like “adjacency up, but still can't ping” instead of treating successful control-plane output as proof that the intended data-plane path is working.</li>
+        <li>Comparing route codes in the routing table — <strong>S</strong> for static versus <strong>O</strong> for OSPF — is a quick way to verify which routing mechanism is currently providing the path during a migration from static to dynamic routing.</li>
       </ul>
     </section>
 
