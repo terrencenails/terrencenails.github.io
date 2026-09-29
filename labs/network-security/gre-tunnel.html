@@ -42,12 +42,31 @@
   p{color:var(--text-dim);margin-bottom:14px;max-width:640px;}
   p strong{color:var(--text);font-weight:500;}
 
-  .topology{
+  .topology-card{
     border:1px solid var(--border);background:var(--panel);border-radius:3px;
-    padding:20px;margin-bottom:20px;font-family:'IBM Plex Mono',monospace;font-size:0.82rem;color:var(--text-dim);
-    overflow-x:auto;white-space:pre;
+    margin-bottom:20px;overflow:hidden;
   }
-  .topology b{color:var(--copper);}
+  .topology-card .topology-title{
+    font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:0.08em;
+    color:var(--copper);padding:14px 16px;border-bottom:1px solid var(--border);background:var(--panel-2);
+  }
+  .topology-wrap{overflow-x:auto;}
+  .topology-table{
+    width:100%;border-collapse:collapse;font-size:0.9rem;min-width:620px;
+  }
+  .topology-table th,.topology-table td{
+    padding:12px 14px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;
+  }
+  .topology-table th{
+    font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--copper);font-weight:500;background:rgba(255,255,255,0.02);
+  }
+  .topology-table td code{font-family:'IBM Plex Mono',monospace;font-size:0.82rem;}
+  .topology-table tr:last-child td{border-bottom:none;}
+  .topology-note{
+    padding:14px 16px;border-top:1px solid var(--border);background:var(--panel-2);
+    color:var(--text-dim);font-size:0.88rem;
+  }
+  .topology-note strong{color:var(--text);font-weight:500;}
 
   .step{
     border:1px solid var(--border);background:var(--panel);border-radius:3px;
@@ -118,13 +137,48 @@
     <section>
       <span class="section-tag">// TOPOLOGY</span>
       <h2>Setup</h2>
-      <div class="topology"><b>PC1</b>      10.10.10.100/24  →  default gateway 10.10.10.1
-<b>Router1</b>  LAN 10.10.10.1/24 (Fa1/0)  |  WAN 198.51.100.1/30 (Se0/0)  |  Tunnel0 192.168.0.1/30
-<b>Router2</b>  Transit router 198.51.100.2/30 (Se0/0)  ↔  198.51.100.5/30 (Se0/1)
-<b>Router3</b>  WAN 198.51.100.6/30 (Se0/0)  |  LAN 10.10.30.1/24 (Fa1/0)  |  Tunnel0 192.168.0.2/30
-<b>PC3</b>      10.10.30.100/24  →  default gateway 10.10.30.1
-
-GRE Tunnel0:  Router1 192.168.0.1/30  ↔  Router3 192.168.0.2/30</div>
+      <div class="topology-card">
+        <div class="topology-title">LAB TOPOLOGY</div>
+        <div class="topology-wrap">
+          <table class="topology-table">
+            <thead>
+              <tr>
+                <th>Device</th>
+                <th>Role</th>
+                <th>Interfaces / Addressing</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>PC1</strong></td>
+                <td>Host on Router1 LAN</td>
+                <td><code>10.10.10.100/24</code><br><code>GW 10.10.10.1</code></td>
+              </tr>
+              <tr>
+                <td><strong>Router1</strong></td>
+                <td>Edge router for Site 1</td>
+                <td><code>Fa1/0  10.10.10.1/24</code><br><code>Se0/0  198.51.100.1/30</code><br><code>Tunnel0 192.168.0.1/30</code><br><code>Lo0    203.0.113.1/32</code></td>
+              </tr>
+              <tr>
+                <td><strong>Router2</strong></td>
+                <td>Transit / WAN router</td>
+                <td><code>Se0/0  198.51.100.2/30</code><br><code>Se0/1  198.51.100.5/30</code><br><code>Lo0    203.0.113.2/32</code></td>
+              </tr>
+              <tr>
+                <td><strong>Router3</strong></td>
+                <td>Edge router for Site 2</td>
+                <td><code>Se0/0  198.51.100.6/30</code><br><code>Fa1/0  10.10.30.1/24</code><br><code>Tunnel0 192.168.0.2/30</code><br><code>Lo0    203.0.113.3/32</code></td>
+              </tr>
+              <tr>
+                <td><strong>PC3</strong></td>
+                <td>Host on Router3 LAN</td>
+                <td><code>10.10.30.100/24</code><br><code>GW 10.10.30.1</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="topology-note"><strong>GRE overlay:</strong> <code>Router1 Tunnel0 192.168.0.1/30 ↔ Router3 Tunnel0 192.168.0.2/30</code></div>
+      </div>
       <p>Router1 and Router3 sit at opposite ends of a routed WAN, with Router2 acting as the transit device between them. The WAN underlay already provides reachability between the GRE source and destination addresses. GRE then builds a logical point-to-point overlay between Router1 and Router3, and static routes are added so each edge router knows to send remote-LAN traffic through that tunnel.</p>
     </section>
 
