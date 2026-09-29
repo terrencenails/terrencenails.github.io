@@ -85,7 +85,7 @@
   <div class="wrap">
     <span class="eyebrow">// NETWORK SECURITY PROJECTS</span>
     <h1>Upgrading the GRE Tunnel to Dynamic Routing with OSPF</h1>
-    <p class="lead">Took the GRE tunnel from the previous project and replaced its hand-configured static routes with OSPF. This run also retained a broader-than-necessary wildcard mask on Router1 so I could document why it still worked in this topology — and why I would tighten it in a production environment.</p>
+    <p class="lead">Took the GRE tunnel from the previous project and replaced its hand-configured static routes with OSPF. During the lab I made one configuration mistake on Router1: I entered <code>network 10.10.10.0 0.255.255.255 area 0</code> instead of the intended <code>network 10.10.10.0 0.0.0.255 area 0</code>. The mistake did not break this small topology, so I kept the screenshot and documented exactly why it still worked — and what risk it would create if left uncorrected.</p>
     <div class="meta-row">
       <div class="badge">OSPF</div>
       <div class="badge">GRE</div>
@@ -156,12 +156,24 @@
       <h2>Advertising the LANs</h2>
 
       <div class="step">
-        <span class="status-tag warn" style="margin-top:20px;">⚠ BROAD MATCH</span>
-        <div class="step-head"><span class="step-num">06</span><h3>Router1 advertises its LAN with a broad wildcard mask</h3></div>
-        <p>Router1 uses <code>network 10.10.10.0 0.255.255.255 area 0</code>. The wildcard mask is broader than the <code>0.0.0.255</code> normally used to target only the <code>10.10.10.0/24</code> range. With <code>0.255.255.255</code>, only the first octet must match, so the statement can match any Router1 interface whose address begins with <code>10.</code>.</p>
-        <p>It still works in this lab because Router1's only matching <code>10.x.x.x</code> interface is the LAN interface at <code>10.10.10.1/24</code>. OSPF enables itself on the matching interface and advertises that interface's actual connected prefix; the wildcard mask in the <code>network</code> statement does not change the interface's configured subnet into a /8.</p>
-        <p>In a larger environment I would tighten this to <code>network 10.10.10.0 0.0.0.255 area 0</code>, because the broader match could unintentionally enable OSPF on another <code>10.x.x.x</code> interface added later.</p>
-        <img src="assets/gre-ospf/06-r1-broad-wildcard-mask.png" alt="Router1 OSPF network statement using a broad wildcard mask">
+        <span class="status-tag warn" style="margin-top:20px;">⚠ CONFIGURATION MISTAKE</span>
+        <div class="step-head"><span class="step-num">06</span><h3>Router1 LAN advertisement — incorrect wildcard mask</h3></div>
+        <p>I entered <code>network 10.10.10.0 0.255.255.255 area 0</code> on Router1. That was a mistake. For this lab, the intended command was <code>network 10.10.10.0 0.0.0.255 area 0</code>, which limits the match to the <code>10.10.10.0/24</code> range.</p>
+
+        <div class="callout">
+          <p><strong>Entered by mistake:</strong> <code>network 10.10.10.0 0.255.255.255 area 0</code><br>
+          <strong>Should have been:</strong> <code>network 10.10.10.0 0.0.0.255 area 0</code></p>
+        </div>
+
+        <p><strong>Why did it still work?</strong> In an OSPF <code>network</code> statement, the wildcard mask is used to match interface IP addresses. With <code>0.255.255.255</code>, only the first octet is fixed, so the command effectively matches any Router1 interface with a <code>10.x.x.x</code> address. In this lab, Router1 only has one such interface — <code>10.10.10.1/24</code> — so OSPF still enabled itself on the intended LAN interface and advertised that interface's actual <code>10.10.10.0/24</code> prefix.</p>
+
+        <p><strong>What happens if it is not corrected?</strong> Nothing immediately breaks in this topology, but the configuration is unnecessarily broad. If Router1 later receives another interface in the <code>10.0.0.0/8</code> range — for example <code>10.20.20.1/24</code> — this same statement could also enable OSPF on that interface in area 0. That could cause an unintended OSPF adjacency to form on that link and could advertise additional connected networks that were never meant to participate in OSPF.</p>
+
+        <p>The important distinction is that the broad wildcard does <strong>not</strong> turn <code>10.10.10.0/24</code> into a <code>10.0.0.0/8</code> route. It broadens which interface addresses can match the OSPF statement. The interface's own configured subnet is still what OSPF advertises.</p>
+
+        <p><strong>Corrective action:</strong> In a production configuration, I would replace the broad statement with <code>network 10.10.10.0 0.0.0.255 area 0</code> so only the intended LAN interface is matched.</p>
+
+        <img src="assets/gre-ospf/06-r1-broad-wildcard-mask.png" alt="Router1 OSPF network statement showing the mistaken broad wildcard mask">
       </div>
 
       <div class="step">
@@ -205,7 +217,7 @@
       <h2>What this demonstrates</h2>
       <ul class="takeaways">
         <li>A FULL OSPF adjacency confirms that the neighbors completed database exchange, but it does not guarantee that a specific LAN prefix has been included in OSPF. The relevant interfaces still have to participate before the remote router can learn those routes.</li>
-        <li>OSPF's <code>network</code> statement wildcard mask selects matching interface addresses; it does not redefine the subnet configured on those interfaces. That is why Router1's broader <code>0.255.255.255</code> match still works here, while also creating unnecessary scope that could include other <code>10.x.x.x</code> interfaces later.</li>
+        <li>The Router1 command <code>network 10.10.10.0 0.255.255.255 area 0</code> was a configuration mistake. It still works in this lab only because <code>10.10.10.1</code> is Router1's only <code>10.x.x.x</code> interface. The correct, tighter statement is <code>network 10.10.10.0 0.0.0.255 area 0</code>.</li>
         <li>Testing after each configuration change surfaces gaps like “adjacency up, but still can't ping” instead of treating successful control-plane output as proof that the intended data-plane path is working.</li>
         <li>Comparing route codes in the routing table — <strong>S</strong> for static versus <strong>O</strong> for OSPF — is a quick way to verify which routing mechanism is currently providing the path during a migration from static to dynamic routing.</li>
       </ul>
