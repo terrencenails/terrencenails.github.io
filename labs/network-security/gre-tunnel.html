@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Site-to-Site GRE Tunnel — Project Write-Up</title>
+<title>Site-to-Site GRE Tunnel with Static Routing — Project Write-Up</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -96,8 +96,8 @@
 <header>
   <div class="wrap">
     <span class="eyebrow">// NETWORK SECURITY PROJECTS</span>
-    <h1>Site-to-Site GRE Tunnel: Connecting Two LANs Over a WAN</h1>
-    <p class="lead">Built a GRE tunnel between two routers across a simulated WAN, then added static routing so each router's LAN could actually reach the other — testing connectivity after every single step instead of assuming the config was right.</p>
+    <h1>Site-to-Site GRE Tunnel with Static Routing</h1>
+    <p class="lead">Built a GRE tunnel between Router1 and Router3 across a routed simulated WAN, then added static routes so traffic could reach the remote LAN through the tunnel — testing connectivity after each stage instead of assuming the configuration was correct.</p>
     <div class="meta-row">
       <div class="badge">GRE</div>
       <div class="badge">Static Routing</div>
@@ -112,17 +112,20 @@
     <section>
       <span class="section-tag">// OBJECTIVE</span>
       <h2>Why this project</h2>
-      <p>A GRE tunnel encapsulates traffic between two routers so their private networks can reach each other across a transit network that wouldn't normally route between them. It's a foundational building block behind a lot of site-to-site connectivity — but it's also easy to configure halfway and assume it's working. This project deliberately tests connectivity <strong>before</strong> the tunnel exists, <strong>after</strong> the tunnel interface is created but not bound, <strong>after</strong> it's bound to real endpoints, and <strong>after</strong> routing is added — so each failure can be traced to the exact piece that was still missing.</p>
+      <p>A GRE tunnel creates a logical point-to-point path between two routers across an existing routed transit network. The tunnel provides the overlay, while routing determines which LAN traffic actually uses it. This project deliberately tests connectivity <strong>before</strong> the tunnel exists, <strong>after</strong> the tunnel interface is created but not bound, <strong>after</strong> it's bound to real endpoints, and <strong>after</strong> static routing is added — so each failure can be traced to the exact piece that was still missing.</p>
     </section>
 
     <section>
       <span class="section-tag">// TOPOLOGY</span>
       <h2>Setup</h2>
-      <div class="topology"><b>Router1</b>  LAN 10.10.10.0/24 (Fa1/0)  |  WAN-facing 198.51.100.1 (Se0/0)  |  Loopback 203.0.113.1
-<b>Router3</b>  LAN 10.10.30.0/24 (Fa1/0)  |  WAN-facing 198.51.100.6 (Se0/0)
+      <div class="topology"><b>PC1</b>      10.10.10.100/24  →  default gateway 10.10.10.1
+<b>Router1</b>  LAN 10.10.10.1/24 (Fa1/0)  |  WAN 198.51.100.1/30 (Se0/0)  |  Tunnel0 192.168.0.1/30
+<b>Router2</b>  Transit router 198.51.100.2/30 (Se0/0)  ↔  198.51.100.5/30 (Se0/1)
+<b>Router3</b>  WAN 198.51.100.6/30 (Se0/0)  |  LAN 10.10.30.1/24 (Fa1/0)  |  Tunnel0 192.168.0.2/30
+<b>PC3</b>      10.10.30.100/24  →  default gateway 10.10.30.1
 
 GRE Tunnel0:  Router1 192.168.0.1/30  ↔  Router3 192.168.0.2/30</div>
-      <p>Two routers, each fronting a separate LAN, connected only by a WAN-facing serial link. Nothing about that WAN link lets 10.10.10.0/24 talk to 10.10.30.0/24 on its own — that's what the tunnel and the routing added on top of it are for.</p>
+      <p>Router1 and Router3 sit at opposite ends of a routed WAN, with Router2 acting as the transit device between them. The WAN underlay already provides reachability between the GRE source and destination addresses. GRE then builds a logical point-to-point overlay between Router1 and Router3, and static routes are added so each edge router knows to send remote-LAN traffic through that tunnel.</p>
     </section>
 
     <section>
@@ -248,8 +251,8 @@ GRE Tunnel0:  Router1 192.168.0.1/30  ↔  Router3 192.168.0.2/30</div>
 
       <div class="step">
         <span class="status-tag ok" style="margin-top:20px;">✓ REACHABLE</span>
-        <div class="step-head"><span class="step-num">17</span><h3>LAN-to-LAN connectivity succeeds</h3></div>
-        <p>The exact same ping that failed at the very start of this project now succeeds — 100% success rate, both LANs fully reachable across the GRE tunnel.</p>
+        <div class="step-head"><span class="step-num">17</span><h3>Router1 reaches the remote LAN host</h3></div>
+        <p>From Router1, a ping to PC3 at <code>10.10.30.100</code> now succeeds with a 100% success rate. This confirms that Router1 can reach the remote LAN through the GRE tunnel after the static route to <code>10.10.30.0/24</code> is installed.</p>
         <img src="assets/gre-tunnel/17-ping-lan-success.png" alt="Successful ping to remote LAN after static routes added">
       </div>
 
@@ -260,7 +263,7 @@ GRE Tunnel0:  Router1 192.168.0.1/30  ↔  Router3 192.168.0.2/30</div>
       </div>
 
       <div class="callout">
-        <p><strong>Result:</strong> full LAN-to-LAN reachability only came together once three separate things were true — the tunnel interface existed, it was bound to real WAN endpoints, and static routes actually pointed each LAN's traffic into it. Testing after every single step, even the ones that "should" work, made it possible to isolate exactly which piece was still missing instead of debugging blind at the end.</p>
+        <p><strong>Result:</strong> routed reachability through the GRE overlay only came together once three separate things were true — the tunnel interfaces existed, they were bound to reachable WAN endpoints, and static routes pointed remote-LAN traffic into the tunnel. Testing after each stage made it possible to isolate exactly which dependency was still missing instead of debugging everything at once.</p>
       </div>
     </section>
 
@@ -268,7 +271,7 @@ GRE Tunnel0:  Router1 192.168.0.1/30  ↔  Router3 192.168.0.2/30</div>
       <span class="section-tag">// TAKEAWAYS</span>
       <h2>What this demonstrates</h2>
       <ul class="takeaways">
-        <li>An interface showing "up" doesn't mean traffic can actually get where it's going — a tunnel needs both a working data path <em>and</em> routing that points into it before it's genuinely useful.</li>
+        <li>An interface showing "up" doesn't by itself prove the intended traffic can reach its destination — a GRE overlay needs working underlay reachability plus routing that points the desired traffic into the tunnel.</li>
         <li>Testing incrementally, after every single command, catches exactly where a chain of dependent configuration breaks — rather than configuring everything at once and debugging a wall of failures at the end.</li>
         <li>GRE tunnels encapsulate traffic, but they don't encrypt it. This design connects two private address spaces over a transit network, but it isn't a substitute for IPsec if confidentiality of the traffic itself matters.</li>
         <li>Static routes work cleanly here because the topology is small and fixed. In a larger or growing environment, this same tunnel would typically carry a dynamic routing protocol instead of hand-maintained routes on each side.</li>
