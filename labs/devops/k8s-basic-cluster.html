@@ -138,204 +138,243 @@
   <div class="wrap">
 
     <section>
-      <span class="section-tag">// OBJECTIVE</span>
-      <h2>Why this project</h2>
-      <p>Most people's first real exposure to Kubernetes is a managed service (EKS, AKS, GKE) where the control plane is already running and half the setup is invisible. Building the control plane by hand with <code>kubeadm</code> instead — even just once, on a single node — is what actually explains what a managed service is hiding: an uninitialized node isn't a cluster yet, a cluster with no CNI plugin can't schedule pods, and a control-plane node by default won't run application workloads at all. This project walks through each of those gates in order, rather than skipping past them.</p>
+      <span class="section-tag">// LAB NOTE</span>
+      <h2>Training environment and redactions</h2>
+      <div class="sandbox-notice">
+        <span class="tag">⚠ LAB ENVIRONMENT — IDENTIFIERS SHOWN INTENTIONALLY</span>
+        <p>This project was completed in a disposable training environment. Screenshots may show lab-only values such as the temporary Cloud Server public IP, SSH host fingerprint, internal Kubernetes addresses, generated object identifiers, and the temporary <code>kubeadm join</code> command.</p>
+        <p>In production documentation, credentials and bootstrap tokens would be redacted, and environment-specific IP addresses, fingerprints, internal naming, and other operational identifiers would be hidden when they are not required for the procedure.</p>
+      </div>
     </section>
 
     <section>
       <span class="section-tag">// PREPARE</span>
-      <h2>Connecting and verifying prerequisites</h2>
-
-      <div class="sandbox-notice">
-        <span class="tag">⚠ LAB ENVIRONMENT — IDENTIFIERS SHOWN INTENTIONALLY</span>
-        <p>This project was completed in a disposable training environment. Some screenshots intentionally retain lab-only values such as a temporary cloud-server public IP, SSH host fingerprint, Kubernetes internal IPs, generated object names/UIDs, and the temporary <code>kubeadm join</code> bootstrap token so the workflow remains visible.</p>
-        <p>In production documentation, credentials and bootstrap tokens would be redacted, and environment-specific IP addresses, host fingerprints, internal naming, object identifiers, and other operational details would be hidden when they are not required for the procedure.</p>
-      </div>
+      <h2>Access the terminal and verify the cluster prerequisites</h2>
+      <p>Use the Lab Credentials and Instant Terminal to log into the control plane node and confirm its automated setup finished. You will then verify the tools needed to build the cluster.</p>
 
       <div class="step">
-        <div class="step-head"><span class="step-num">01</span><h3>SSH into the control plane host</h3></div>
-        <p>Connected to the provisioned host over SSH using the assigned credentials. The first connection attempt prompts to trust the host's SSH key fingerprint — expected for any brand-new machine that's never been connected to before.</p>
-        <img src="assets/k8s-basic-cluster/01-ssh-control-plane.png" alt="SSH connection to the control plane host, accepting the host key and entering the password">
+        <div class="step-head"><span class="step-num">01</span><h3>Connect to the control plane node</h3></div>
+        <p>Wait until the <strong>Lab Credentials</strong> section is available, copy the <strong>Public IP</strong> under <strong>Cloud Server</strong>, and open <strong>Instant Terminal</strong>. At the terminal prompt, replace <code>&lt;&lt;Public IP&gt;&gt;</code> with the copied address and run:</p>
         <div class="cmd-note">
-          <strong>WHAT THIS DOES</strong>
-          <p><code>ssh cloud_user@&lt;public-ip&gt;</code> opens a secure remote terminal session on that machine, logged in as <code>cloud_user</code>. Everything typed afterward runs on that remote host, not on the local computer.</p>
+          <strong>COMMAND</strong>
+          <p><code>ssh cloud_user@&lt;&lt;Public IP&gt;&gt;</code></p>
+        </div>
+        <p>When prompted to continue connecting, enter <code>y</code>. When prompted for the password, copy the <strong>Password</strong> from the Cloud Server section, return to the terminal, paste it, and press Enter.</p>
+        <p>If the prompt shows <code>@ip</code> instead of <code>@controlplane</code>, press <code>Control+D</code> to log out, wait 30 seconds, and connect again. The expected prompt is <code>cloud_user@controlplane</code>; hostname assignment can take two to three minutes.</p>
+        <img src="assets/k8s-basic-cluster/01-ssh-control-plane.png" alt="SSH connection to the Kubernetes control plane lab host">
+        <div class="prod-note">
+          <strong>IN PRODUCTION</strong>
+          <p>The lab public IP and SSH fingerprint are shown for training visibility. Production documentation would normally redact environment-specific connection details when they are not required.</p>
         </div>
       </div>
 
       <div class="step">
-        <div class="step-head"><span class="step-num">02</span><h3>Confirm the node's tools are ready</h3></div>
-        <p>Before touching Kubernetes itself, confirmed the host finished its automated setup and that the core components for this kubeadm-based node were present: <code>kubeadm</code> for bootstrapping the cluster, <code>kubectl</code> for interacting with the API server, <code>kubelet</code> as the node agent, and <code>containerd</code> as the container runtime.</p>
-        <p>The screenshot also captures a simple command typo: I first entered <code>kubeclt version --client</code>, received <code>command not found</code>, then corrected it to <code>kubectl version --client</code>. I kept that in the project because it reflects the actual troubleshooting flow.</p>
-        <img src="assets/k8s-basic-cluster/02-verify-prerequisites.png" alt="Terminal showing ls setup-complete, kubeadm version, kubectl version --client, and systemctl status containerd all confirming success">
+        <div class="step-head"><span class="step-num">02</span><h3>Confirm setup completed and verify the prerequisites</h3></div>
+        <p>Confirm the instance finished its automated setup:</p>
         <div class="cmd-note">
-          <strong>WHAT THIS DOES</strong>
+          <strong>COMMANDS</strong>
           <ul>
-            <li><code>ls setup-complete</code> — just checks that one marker file exists, confirming the host's provisioning script finished running.</li>
-            <li><code>kubeadm version</code> / <code>kubectl version --client</code> — print the installed version of those command-line tools. <code>kubelet</code> is the node agent used by Kubernetes to run and manage workloads on the node.</li>
-            <li><code>systemctl status containerd</code> — shows whether the container runtime service is <code>active (running)</code>. If it isn't running, no container on this machine can start, Kubernetes included.</li>
+            <li><code>ls setup-complete</code> — expected output is the <code>setup-complete</code> file. If it is not listed yet, wait a minute and try again.</li>
+            <li><code>kubeadm version</code> — verifies kubeadm is installed.</li>
+            <li><code>kubectl version --client</code> — verifies kubectl is installed.</li>
+            <li><code>systemctl status containerd</code> — verifies containerd is running. Enter <code>q</code> to exit the status command.</li>
           </ul>
         </div>
+        <img src="assets/k8s-basic-cluster/02-verify-prerequisites.png" alt="Lab prerequisite checks for setup-complete, kubeadm, kubectl, and containerd">
+      </div>
+
+      <div class="callout">
+        <p><strong>Result:</strong> successfully connected to the control plane node and verified the prerequisites for building the cluster.</p>
       </div>
     </section>
 
     <section>
       <span class="section-tag">// INITIALIZE</span>
-      <h2>Bootstrapping the control plane</h2>
+      <h2>Initialize the Kubernetes cluster with kubeadm</h2>
+      <p>Confirm the node meets the requirements for a Kubernetes control plane, then initialize the cluster and configure <code>kubectl</code> access to it.</p>
 
       <div class="step">
-        <div class="step-head"><span class="step-num">03</span><h3>Confirm swap is off, then initialize</h3></div>
-        <p>For the default kubelet behavior used in this lab, swap is expected to be disabled. An empty <code>swapon --show</code> output confirms that condition before initialization. With swap confirmed off, <code>kubeadm init</code> was run with an explicit pod network range reserved for Flannel, the CNI plugin installed a few steps later.</p>
-        <p>The screenshot also shows one incorrect <code>sudo</code> password entry followed by <code>Sorry, try again.</code>; the password was then re-entered correctly and the initialization continued.</p>
-        <img src="assets/k8s-basic-cluster/03-swap-check-kubeadm-init.png" alt="swapon --show returning nothing, followed by sudo kubeadm init with a pod network CIDR flag and a sudo password prompt">
+        <div class="step-head"><span class="step-num">03</span><h3>Confirm swap is disabled and initialize the control plane</h3></div>
+        <p>Confirm swap is disabled:</p>
         <div class="cmd-note">
-          <strong>WHAT THIS DOES</strong>
-          <p><code>sudo kubeadm init --pod-network-cidr=10.244.0.0/16</code> sets up everything a control plane needs in one command — the API server, the scheduler, the controller manager, and <code>etcd</code> (the cluster's datastore) — and reserves the <code>10.244.0.0/16</code> address range for pods to use later. <code>--pod-network-cidr</code> has to match whatever CNI plugin gets installed afterward; Flannel's default range is exactly this one.</p>
+          <strong>COMMAND</strong>
+          <p><code>swapon --show</code></p>
         </div>
+        <p>No output confirms that swap is disabled, which this lab requires. Then initialize the cluster control plane:</p>
+        <div class="cmd-note">
+          <strong>COMMAND</strong>
+          <p><code>sudo kubeadm init --pod-network-cidr=10.244.0.0/16</code></p>
+        </div>
+        <p>When prompted with <code>[sudo] password for cloud_user:</code>, enter the Password from the Cloud Server section and press Enter. The password is not shown on screen. <code>sudo</code> caches the credential for a few minutes, so later sudo commands may not prompt again.</p>
+        <img src="assets/k8s-basic-cluster/03-swap-check-kubeadm-init.png" alt="Swap check followed by kubeadm initialization using the Flannel pod network CIDR">
       </div>
 
       <div class="step">
         <span class="status-tag ok" style="margin-top:20px;">✓ CONTROL PLANE INITIALIZED</span>
-        <div class="step-head"><span class="step-num">04</span><h3>Read the success output carefully</h3></div>
-        <p><code>kubeadm init</code> succeeding prints an important block of output: the commands needed to configure <code>kubectl</code> for the current user, plus a ready-to-use <code>kubeadm join</code> command for adding worker nodes. That join command contains a bootstrap token and CA certificate hash, and the token is temporary.</p>
-        <img src="assets/k8s-basic-cluster/04-kubeadm-init-success.png" alt="kubeadm init success message with next steps and a kubeadm join command including token and certificate hash">
-        <div class="cmd-note">
-          <strong>WHAT THE OUTPUT MEANS</strong>
-          <p>"Your Kubernetes control-plane has initialized successfully" means the API server is up and the cluster technically exists — but it has no worker capacity yet and, as later steps confirm, can't schedule ordinary pods until networking is added. The <code>kubeadm join ...</code> line is the exact command any additional machine would run to become a worker node in this same cluster.</p>
-        </div>
+        <div class="step-head"><span class="step-num">04</span><h3>Confirm kubeadm initialization succeeded</h3></div>
+        <p>The expected output includes <strong>Your Kubernetes control-plane has initialized successfully!</strong> along with a <code>kubeadm join</code> command for adding worker nodes.</p>
+        <img src="assets/k8s-basic-cluster/04-kubeadm-init-success.png" alt="Successful kubeadm initialization output with the generated worker join command">
         <div class="prod-note">
           <strong>IN PRODUCTION</strong>
-          <p>The <code>kubeadm join</code> bootstrap token is a credential and should be redacted from screenshots or shared documentation. The lab screenshot leaves it visible only because this is a disposable training environment.</p>
+          <p>The <code>kubeadm join</code> command contains a bootstrap token. It is intentionally visible in this disposable lab screenshot, but it should be redacted from production documentation.</p>
         </div>
       </div>
 
       <div class="step">
-        <div class="step-head"><span class="step-num">05</span><h3>Set up kubeconfig for the regular user</h3></div>
-        <p><code>kubeadm init</code> writes the cluster's admin credentials to a root-only file. Copying that file into the regular user's home directory (and fixing its ownership) is what lets <code>cloud_user</code> run <code>kubectl</code> commands without needing <code>sudo</code> every single time.</p>
-        <img src="assets/k8s-basic-cluster/05-kubeconfig-setup.png" alt="mkdir, sudo cp, and sudo chown commands setting up the kubeconfig file for cloud_user">
+        <div class="step-head"><span class="step-num">05</span><h3>Set up kubeconfig for cloud_user</h3></div>
+        <p>Configure <code>kubectl</code> access for <code>cloud_user</code> with the commands provided by kubeadm:</p>
         <div class="cmd-note">
-          <strong>WHAT THIS DOES</strong>
-          <p>Creates a <code>~/.kube</code> folder, copies the admin config file into it as <code>config</code> (the default location <code>kubectl</code> looks for), then changes that file's owner from <code>root</code> to the current user so it can actually be read without elevated permissions.</p>
+          <strong>COMMAND</strong>
+          <p><code>mkdir -p $HOME/.kube &amp;&amp; \<br>
+sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config &amp;&amp; \<br>
+sudo chown $(id -u):$(id -g) $HOME/.kube/config</code></p>
         </div>
+        <p>If <code>sudo</code> prompts for a password, enter the Password from the Cloud Server section and press Enter.</p>
+        <img src="assets/k8s-basic-cluster/05-kubeconfig-setup.png" alt="Commands configuring kubeconfig for cloud_user">
         <div class="prod-note">
           <strong>IN PRODUCTION</strong>
-          <p><code>/etc/kubernetes/admin.conf</code> grants highly privileged administrative access. Copying it for the lab user is appropriate for this basic kubeadm exercise, but normal production users should receive credentials and RBAC permissions scoped to the access they actually need.</p>
+          <p><code>/etc/kubernetes/admin.conf</code> contains highly privileged cluster credentials. Production users would normally receive appropriately scoped access rather than sharing an administrative kubeconfig.</p>
         </div>
       </div>
 
       <div class="step">
         <div class="step-head"><span class="step-num">06</span><h3>Confirm kubectl can reach the API server</h3></div>
-        <p>With kubeconfig in place, <code>kubectl cluster-info</code> is the simplest possible sanity check — it proves the client can actually authenticate to and communicate with the API server, before attempting anything more complex.</p>
-        <img src="assets/k8s-basic-cluster/06-cluster-info.png" alt="kubectl cluster-info output showing the Kubernetes control plane and CoreDNS endpoints">
         <div class="cmd-note">
-          <strong>WHAT THE OUTPUT MEANS</strong>
-          <p>Seeing a URL for "Kubernetes control plane is running at ..." confirms that <code>kubectl</code> can authenticate to and communicate with the API server. A failure here would require checking the kubeconfig, API-server health, certificates/context, and network connectivity rather than assuming a single cause.</p>
+          <strong>COMMAND</strong>
+          <p><code>kubectl cluster-info</code></p>
         </div>
+        <p>The expected output displays the Kubernetes control plane endpoint, confirming API server connectivity.</p>
+        <img src="assets/k8s-basic-cluster/06-cluster-info.png" alt="kubectl cluster-info showing the Kubernetes control plane endpoint">
       </div>
-    </section>
-
-    <section>
-      <span class="section-tag">// VERIFY</span>
-      <h2>Confirming the cluster isn't fully ready yet</h2>
 
       <div class="step">
         <span class="status-tag warn" style="margin-top:20px;">⚠ NOT READY — EXPECTED</span>
-        <div class="step-head"><span class="step-num">07</span><h3>Check node and system pod status before networking exists</h3></div>
-        <p>Deliberately checked cluster health <em>before</em> installing a CNI plugin, specifically to see — and understand — the expected not-ready state, rather than only ever seeing a cluster that already works.</p>
-        <img src="assets/k8s-basic-cluster/07-nodes-notready-pods-pending.png" alt="kubectl get nodes showing NotReady status, and kubectl get pods -n kube-system showing CoreDNS pods Pending">
+        <div class="step-head"><span class="step-num">07</span><h3>Check the node and system pods before networking is installed</h3></div>
         <div class="cmd-note">
-          <strong>WHAT THE OUTPUT MEANS</strong>
-          <p><code>kubectl get nodes</code> showing <code>NotReady</code> and CoreDNS pods stuck <code>Pending</code> both trace back to the same root cause: there's no CNI (Container Network Interface) plugin yet, so the cluster has no way to hand out pod IP addresses. Kubernetes correctly refuses to mark the node ready or schedule pods until that's solved — this isn't a misconfiguration, it's the cluster accurately reporting what's missing.</p>
+          <strong>COMMANDS</strong>
+          <ul>
+            <li><code>kubectl get nodes</code> — expected node status is <code>NotReady</code>.</li>
+            <li><code>kubectl get pods -n kube-system</code> — expected CoreDNS status is <code>Pending</code>.</li>
+          </ul>
         </div>
+        <p>This is expected because the cluster does not yet have a CNI plugin installed to manage pod networking.</p>
+        <img src="assets/k8s-basic-cluster/07-nodes-notready-pods-pending.png" alt="Kubernetes node NotReady and CoreDNS pods Pending before CNI installation">
+      </div>
+
+      <div class="callout">
+        <p><strong>Result:</strong> successfully initialized the Kubernetes control plane with kubeadm and configured kubectl access to it.</p>
       </div>
     </section>
 
     <section>
       <span class="section-tag">// NETWORK</span>
-      <h2>Installing the CNI plugin and freeing up the node</h2>
+      <h2>Configure cluster networking and make the node schedulable</h2>
+      <p>Apply the CNI plugin staged on the node so pods can communicate across the cluster, then remove the control-plane taint so the single node can run application workloads.</p>
 
       <div class="step">
         <span class="status-tag ok" style="margin-top:20px;">✓ NODE READY</span>
-        <div class="step-head"><span class="step-num">08</span><h3>Apply Flannel, confirm Ready, then remove the control-plane taint</h3></div>
-        <p>Applying the pre-staged Flannel manifest installs the CNI plugin that was missing in the previous step — and the node flips to <code>Ready</code> almost immediately afterward. But a single-node cluster has one more gate: by default, the control-plane node is <em>tainted</em> to refuse ordinary application pods, since in a real multi-node cluster that taint is what keeps regular workloads off the node running the cluster's own control components. With only one node here, that taint has to be removed or nothing will ever be schedulable.</p>
-        <img src="assets/k8s-basic-cluster/08-flannel-apply-taint-removed.png" alt="kubectl apply of the Flannel manifest, Flannel pod running, node Ready, system pods all Running, taint inspected and then removed">
+        <div class="step-head"><span class="step-num">08</span><h3>Apply Flannel and remove the control-plane taint</h3></div>
         <div class="cmd-note">
-          <strong>WHAT THIS DOES</strong>
+          <strong>COMMANDS</strong>
           <ul>
-            <li><code>kubectl apply -f kube-flannel.yml</code> — installs Flannel, which hands out the actual pod IP addresses from the <code>10.244.0.0/16</code> range reserved back in step 03.</li>
-            <li><code>kubectl describe node controlplane | grep Taints</code> — shows the <code>node-role.kubernetes.io/control-plane:NoSchedule</code> taint, Kubernetes' built-in way of steering regular pods away from a control-plane node.</li>
-            <li><code>kubectl taint nodes --all node-role.kubernetes.io/control-plane-</code> — the trailing <code>-</code> means "remove this taint," not add it. Without this, no application pod could ever be scheduled on a one-node cluster.</li>
+            <li><code>kubectl apply -f kube-flannel.yml</code> — applies the pre-staged Flannel CNI manifest.</li>
+            <li><code>kubectl get pods -n kube-flannel</code> — confirms the Flannel pods are running.</li>
+            <li><code>kubectl get nodes</code> — expected node status is now <code>Ready</code>.</li>
+            <li><code>kubectl get pods -n kube-system</code> — confirms the system pods are now running.</li>
+            <li><code>kubectl describe node controlplane | grep Taints</code> — displays the control-plane taint.</li>
+            <li><code>kubectl taint nodes --all node-role.kubernetes.io/control-plane-</code> — removes the taint so application workloads can run on this single-node cluster.</li>
           </ul>
         </div>
+        <p>The <code>node-role.kubernetes.io/control-plane</code> taint prevents regular pods from being scheduled onto the node. In a multi-node cluster, this keeps application workloads off the control plane. Because this lab has only one node, the taint must be removed before application pods can run.</p>
+        <img src="assets/k8s-basic-cluster/08-flannel-apply-taint-removed.png" alt="Flannel applied, node Ready, system pods running, and control-plane taint removed">
+      </div>
+
+      <div class="callout">
+        <p><strong>Result:</strong> successfully configured cluster networking with Flannel and made the control plane node schedulable.</p>
       </div>
     </section>
 
     <section>
       <span class="section-tag">// DEPLOY</span>
-      <h2>Deploying and scaling a web server</h2>
+      <h2>Deploy a web server application to the cluster</h2>
+      <p>Create a Deployment that runs the nginx web server, confirm it is running, and review how <code>kubectl</code> translates the command into a full object specification.</p>
 
       <div class="step">
-        <div class="step-head"><span class="step-num">09</span><h3>Create an nginx Deployment</h3></div>
-        <p>With the node ready and schedulable, deployed nginx as a Kubernetes <strong>Deployment</strong> rather than a bare pod. The Deployment manages a ReplicaSet that maintains the desired number of Pods and supports scaling and rollout behavior, while the kubelet on the node is responsible for running containers and restarting them locally when required.</p>
-        <img src="assets/k8s-basic-cluster/09-deploy-nginx.png" alt="kubectl create deployment for globomantics-web, rollout status succeeding, and the pod shown Running and scheduled on controlplane">
+        <div class="step-head"><span class="step-num">09</span><h3>Create the nginx Deployment</h3></div>
         <div class="cmd-note">
-          <strong>WHAT THIS DOES</strong>
-          <p><code>kubectl create deployment globomantics-web --image=nginx:1.31</code> creates a Deployment with a desired replica count of one. <code>kubectl rollout status</code> reports when the rollout completes, and <code>kubectl get pods -o wide</code> confirms which node the Pod was scheduled on — <code>controlplane</code>, since it is the only node available.</p>
+          <strong>COMMANDS</strong>
+          <ul>
+            <li><code>kubectl create deployment globomantics-web --image=nginx:1.31</code></li>
+            <li><code>kubectl rollout status deployment/globomantics-web</code></li>
+            <li><code>kubectl get pods -o wide</code></li>
+          </ul>
         </div>
+        <p>The expected output shows the pod running and the <strong>NODE</strong> column showing <code>controlplane</code>, since it is the only node in the cluster.</p>
+        <img src="assets/k8s-basic-cluster/09-deploy-nginx.png" alt="nginx Deployment created and pod running on the controlplane node">
       </div>
 
       <div class="step">
-        <div class="step-head"><span class="step-num">10</span><h3>Review what kubectl actually built</h3></div>
-        <p>The one-line <code>create deployment</code> command results in a much more detailed object underneath — labels, a pod template, rollout strategy, replica counts, generated metadata, and current status. Viewing the full YAML shows Kubernetes' stored API representation of the Deployment, not a minimal hand-written manifest.</p>
-        <img src="assets/k8s-basic-cluster/10-deployment-yaml.png" alt="kubectl get deployment output as full YAML, showing spec, selector, pod template, and status fields">
+        <div class="step-head"><span class="step-num">10</span><h3>Review the Deployment's generated configuration</h3></div>
         <div class="cmd-note">
-          <strong>WHAT THE OUTPUT MEANS</strong>
-          <p><code>kubectl get deployment globomantics-web -o yaml</code> prints the Deployment's stored API object. The <code>spec.selector</code> and <code>spec.template</code> fields describe which Pods belong to the Deployment and how new Pods should be created, while fields such as <code>uid</code>, <code>resourceVersion</code>, <code>creationTimestamp</code>, and <code>status</code> are generated or maintained by Kubernetes.</p>
+          <strong>COMMAND</strong>
+          <p><code>kubectl get deployment globomantics-web -o yaml</code></p>
         </div>
+        <p>The <code>kubectl create deployment</code> command builds the Deployment object specification, including the pod template, labels, and selector fields.</p>
+        <img src="assets/k8s-basic-cluster/10-deployment-yaml.png" alt="Generated YAML for the globomantics-web Deployment">
       </div>
 
       <div class="step">
-        <div class="step-head"><span class="step-num">11</span><h3>Scale to two replicas</h3></div>
-        <p>Scaling from one pod to two is a single command specifically because a Deployment already tracks a desired replica count — asking for two just changes that number, and Kubernetes' controller does the work of creating the second pod to match it.</p>
-        <img src="assets/k8s-basic-cluster/11-scale-replicas.png" alt="kubectl scale deployment --replicas=2 and kubectl get pods showing two pods Running">
+        <div class="step-head"><span class="step-num">11</span><h3>Scale the Deployment to two replicas</h3></div>
         <div class="cmd-note">
-          <strong>WHAT THIS DOES</strong>
-          <p><code>kubectl scale deployment globomantics-web --replicas=2</code> updates the desired replica count from 1 to 2. <code>kubectl get pods</code> afterward confirms both Pods are <code>Running</code> with <code>READY 1/1</code>, meaning each Pod's single container is currently considered Ready. No custom <code>readinessProbe</code> was configured in this lab.</p>
+          <strong>COMMANDS</strong>
+          <ul>
+            <li><code>kubectl scale deployment globomantics-web --replicas=2</code></li>
+            <li><code>kubectl get pods</code></li>
+          </ul>
         </div>
+        <p>The expected output lists two pods with a <code>Running</code> status and a <code>READY</code> value of <code>1/1</code>.</p>
+        <img src="assets/k8s-basic-cluster/11-scale-replicas.png" alt="Deployment scaled to two nginx replicas and both pods Running">
+      </div>
+
+      <div class="callout">
+        <p><strong>Result:</strong> successfully deployed and scaled a web server application on the Kubernetes cluster.</p>
       </div>
     </section>
 
     <section>
       <span class="section-tag">// EXPOSE</span>
-      <h2>Exposing the application and verifying access</h2>
+      <h2>Expose and verify access to the application</h2>
+      <p>Expose the Deployment with a NodePort service, then verify access to the application from inside the control plane node.</p>
 
       <div class="step">
-        <div class="step-head"><span class="step-num">12</span><h3>Create a NodePort service and test via the cluster IP</h3></div>
-        <p>A Deployment's pods aren't reachable from outside the cluster on their own — a <strong>Service</strong> is what gives them a stable address. A <code>NodePort</code> service does two things at once: it assigns an internal cluster IP, and it opens a specific port on the node itself that forwards to that service.</p>
-        <img src="assets/k8s-basic-cluster/12-nodeport-expose-cluster-ip-curl.png" alt="kubectl expose creating a NodePort service, get service showing the assigned node port, and curl to the cluster IP returning the nginx welcome page">
+        <div class="step-head"><span class="step-num">12</span><h3>Create the NodePort service and test the ClusterIP</h3></div>
         <div class="cmd-note">
-          <strong>WHAT THIS DOES</strong>
+          <strong>COMMANDS</strong>
           <ul>
-            <li><code>kubectl expose deployment globomantics-web --type=NodePort --port=80</code> — creates the service and opens a random high port (30974 here) on the node that maps to the Deployment's port 80.</li>
-            <li><code>CLUSTER_IP=$(kubectl get service ... -o jsonpath=...)</code> — grabs just the service's internal IP address into a shell variable, instead of reading it manually off the previous command's output.</li>
-            <li><code>curl http://$CLUSTER_IP</code> — makes an HTTP request from the cluster node to the Service's internal ClusterIP. Getting back the nginx welcome page confirms the Service can route traffic to the nginx Pods.</li>
+            <li><code>kubectl expose deployment globomantics-web --type=NodePort --port=80</code></li>
+            <li><code>kubectl get service globomantics-web</code></li>
+            <li><code>CLUSTER_IP=$(kubectl get service globomantics-web -o jsonpath='{.spec.clusterIP}')</code></li>
+            <li><code>curl http://$CLUSTER_IP</code></li>
           </ul>
         </div>
+        <p>Record the port displayed in the <code>PORT(S)</code> column after <code>80:</code>; this is the node port assigned to the service. Curling the ClusterIP from the control plane node should return the nginx welcome page HTML.</p>
+        <img src="assets/k8s-basic-cluster/12-nodeport-expose-cluster-ip-curl.png" alt="NodePort service creation, service details, ClusterIP retrieval, and nginx response through ClusterIP">
       </div>
 
       <div class="step">
         <span class="status-tag ok" style="margin-top:20px;">✓ APPLICATION REACHABLE</span>
-        <div class="step-head"><span class="step-num">13</span><h3>Confirm access via the node port too</h3></div>
-        <p>Testing a second path — <code>localhost</code> plus the node port, rather than the internal ClusterIP — confirms that NodePort forwarding works locally on the Kubernetes node. This does not by itself prove that an external client can reach the service.</p>
-        <img src="assets/k8s-basic-cluster/13-curl-localhost-nodeport.png" alt="curl to localhost on the node port, returning the nginx welcome page HTML with the title tag highlighted">
+        <div class="step-head"><span class="step-num">13</span><h3>Test the NodePort from localhost</h3></div>
+        <p>Replace <code>&lt;&lt;node port&gt;&gt;</code> with the port recorded in the previous step:</p>
         <div class="cmd-note">
-          <strong>WHAT THE OUTPUT MEANS</strong>
-          <p><code>curl http://localhost:30974</code> returning the same nginx welcome page confirms the local NodePort path works: node port → Service → Pod → nginx. External reachability would require a separate test against a reachable node IP and would also depend on any host firewall, cloud security group, or upstream network rules permitting the NodePort.</p>
+          <strong>COMMAND</strong>
+          <p><code>curl http://localhost:&lt;&lt;node port&gt;&gt;</code></p>
         </div>
+        <p>The expected output is the nginx welcome page HTML, confirming the application is reachable through the NodePort from inside the control plane node.</p>
+        <img src="assets/k8s-basic-cluster/13-curl-localhost-nodeport.png" alt="nginx welcome page returned through localhost and the assigned NodePort">
       </div>
 
       <div class="callout">
-        <p><strong>Result:</strong> a working single-node Kubernetes cluster — control plane initialized, pod networking installed, a scaled two-replica Deployment running, and nginx reachable from the cluster node through both the Service ClusterIP and the local NodePort path.</p>
+        <p><strong>Result:</strong> the Deployment is exposed through a NodePort service and the nginx application is reachable from the control plane node through both the service ClusterIP and the node port on localhost.</p>
       </div>
     </section>
 
@@ -343,14 +382,14 @@
       <span class="section-tag">// TAKEAWAYS</span>
       <h2>What this demonstrates</h2>
       <ul class="takeaways">
-        <li><code>kubeadm init</code> bootstraps the control plane, but the node remains <code>NotReady</code> until a compatible CNI plugin is installed. In this single-node lab, the control-plane taint also had to be removed before application workloads could be scheduled there.</li>
-        <li>A Deployment and its ReplicaSet maintain the desired number of Pods and make scaling straightforward, while the kubelet handles container execution and local restarts on the node.</li>
-        <li>A NodePort Service provides an internal ClusterIP plus a port on each eligible node. This lab verified both paths locally from the node; proving true external access would require a separate test against a reachable node IP with the necessary network rules in place.</li>
+        <li>A kubeadm cluster moves through distinct stages: host preparation, control-plane initialization, kubeconfig setup, CNI installation, and workload scheduling.</li>
+        <li>Flannel provides the pod-networking layer required before the node becomes <code>Ready</code>, and a single-node cluster requires removal of the control-plane taint before normal application pods can be scheduled there.</li>
+        <li>A Deployment can be created, inspected, and scaled through <code>kubectl</code>, while a NodePort Service provides a stable way to expose the nginx workload and test access from the control plane node.</li>
       </ul>
 
       <div class="sandbox-notice">
         <span class="tag">⚠ SANDBOX ENVIRONMENT — NOT PRODUCTION</span>
-        <p>This project was conducted in a controlled sandbox environment. Lab-only identifiers and temporary credentials are shown intentionally for instructional clarity; production documentation would redact credentials, tokens, and environment-specific operational details where appropriate.</p>
+        <p>This project follows the supplied training-lab workflow. Lab-only identifiers are intentionally visible for instructional clarity; production documentation would redact credentials, tokens, and environment-specific operational details where appropriate.</p>
       </div>
     </section>
 
