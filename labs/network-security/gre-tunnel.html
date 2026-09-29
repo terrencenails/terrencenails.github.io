@@ -42,31 +42,37 @@
   p{color:var(--text-dim);margin-bottom:14px;max-width:640px;}
   p strong{color:var(--text);font-weight:500;}
 
-  .topology-card{
-    border:1px solid var(--border);background:var(--panel);border-radius:3px;
-    margin-bottom:20px;overflow:hidden;
-  }
-  .topology-card .topology-title{
-    font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:0.08em;
-    color:var(--copper);padding:14px 16px;border-bottom:1px solid var(--border);background:var(--panel-2);
-  }
-  .topology-wrap{overflow-x:auto;}
+  .topology-grid{margin-bottom:20px;}
   .topology-table{
-    width:100%;border-collapse:collapse;font-size:0.9rem;min-width:620px;
+    width:100%;border-collapse:collapse;margin-bottom:18px;
+    background:#232323;border:1px solid #4a4a4a;font-size:0.92rem;
   }
-  .topology-table th,.topology-table td{
-    padding:12px 14px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;
+  .topology-table th,
+  .topology-table td{
+    border:1px solid #4a4a4a;padding:10px 12px;text-align:left;vertical-align:top;
   }
   .topology-table th{
-    font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--copper);font-weight:500;background:rgba(255,255,255,0.02);
+    background:#4b4b4b;color:#f3f3f3;font-family:'Space Grotesk',sans-serif;
+    font-size:0.98rem;font-weight:700;
   }
-  .topology-table td code{font-family:'IBM Plex Mono',monospace;font-size:0.82rem;}
-  .topology-table tr:last-child td{border-bottom:none;}
+  .topology-table td{color:#f1f1f1;line-height:1.45;}
+  .topology-table td.device{
+    font-weight:700;width:24%;white-space:nowrap;
+  }
+  .topology-table td.interface{width:24%;}
+  .topology-table td.ip{width:25%;font-family:'IBM Plex Mono',monospace;font-size:0.84rem;}
+  .topology-table td.mask,
+  .topology-table td.gateway{width:27%;font-family:'IBM Plex Mono',monospace;font-size:0.84rem;}
+  .topology-caption{
+    font-family:'IBM Plex Mono',monospace;font-size:0.75rem;letter-spacing:0.08em;
+    color:var(--copper);margin:8px 0 10px;
+  }
   .topology-note{
-    padding:14px 16px;border-top:1px solid var(--border);background:var(--panel-2);
-    color:var(--text-dim);font-size:0.88rem;
+    padding:14px 16px;border-left:2px solid var(--copper);background:var(--panel-2);
+    color:var(--text-dim);font-size:0.88rem;margin-bottom:18px;
   }
   .topology-note strong{color:var(--text);font-weight:500;}
+  .topology-note code{font-family:'IBM Plex Mono',monospace;font-size:0.82rem;}
 
   .step{
     border:1px solid var(--border);background:var(--panel);border-radius:3px;
@@ -137,48 +143,108 @@
     <section>
       <span class="section-tag">// TOPOLOGY</span>
       <h2>Setup</h2>
-      <div class="topology-card">
-        <div class="topology-title">LAB TOPOLOGY</div>
-        <div class="topology-wrap">
-          <table class="topology-table">
-            <thead>
-              <tr>
-                <th>Device</th>
-                <th>Role</th>
-                <th>Interfaces / Addressing</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>PC1</strong></td>
-                <td>Host on Router1 LAN</td>
-                <td><code>10.10.10.100/24</code><br><code>GW 10.10.10.1</code></td>
-              </tr>
-              <tr>
-                <td><strong>Router1</strong></td>
-                <td>Edge router for Site 1</td>
-                <td><code>Fa1/0  10.10.10.1/24</code><br><code>Se0/0  198.51.100.1/30</code><br><code>Tunnel0 192.168.0.1/30</code><br><code>Lo0    203.0.113.1/32</code></td>
-              </tr>
-              <tr>
-                <td><strong>Router2</strong></td>
-                <td>Transit / WAN router</td>
-                <td><code>Se0/0  198.51.100.2/30</code><br><code>Se0/1  198.51.100.5/30</code><br><code>Lo0    203.0.113.2/32</code></td>
-              </tr>
-              <tr>
-                <td><strong>Router3</strong></td>
-                <td>Edge router for Site 2</td>
-                <td><code>Se0/0  198.51.100.6/30</code><br><code>Fa1/0  10.10.30.1/24</code><br><code>Tunnel0 192.168.0.2/30</code><br><code>Lo0    203.0.113.3/32</code></td>
-              </tr>
-              <tr>
-                <td><strong>PC3</strong></td>
-                <td>Host on Router3 LAN</td>
-                <td><code>10.10.30.100/24</code><br><code>GW 10.10.30.1</code></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="topology-note"><strong>GRE overlay:</strong> <code>Router1 Tunnel0 192.168.0.1/30 ↔ Router3 Tunnel0 192.168.0.2/30</code></div>
+      <div class="topology-grid">
+        <div class="topology-caption">ROUTER ADDRESSING</div>
+        <table class="topology-table">
+          <thead>
+            <tr>
+              <th>Device</th>
+              <th>Interface</th>
+              <th>IP Address</th>
+              <th>Subnet Mask</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="device" rowspan="4">Router1</td>
+              <td class="interface">Serial 0/0</td>
+              <td class="ip">198.51.100.1</td>
+              <td class="mask">255.255.255.252</td>
+            </tr>
+            <tr>
+              <td class="interface">FastEthernet 1/0</td>
+              <td class="ip">10.10.10.1</td>
+              <td class="mask">255.255.255.0</td>
+            </tr>
+            <tr>
+              <td class="interface">Loopback 0</td>
+              <td class="ip">203.0.113.1</td>
+              <td class="mask">255.255.255.255</td>
+            </tr>
+            <tr>
+              <td class="interface">Tunnel 0</td>
+              <td class="ip">192.168.0.1</td>
+              <td class="mask">255.255.255.252</td>
+            </tr>
+
+            <tr>
+              <td class="device" rowspan="3">Router2</td>
+              <td class="interface">Serial 0/0</td>
+              <td class="ip">198.51.100.2</td>
+              <td class="mask">255.255.255.252</td>
+            </tr>
+            <tr>
+              <td class="interface">Serial 0/1</td>
+              <td class="ip">198.51.100.5</td>
+              <td class="mask">255.255.255.252</td>
+            </tr>
+            <tr>
+              <td class="interface">Loopback 0</td>
+              <td class="ip">203.0.113.2</td>
+              <td class="mask">255.255.255.255</td>
+            </tr>
+
+            <tr>
+              <td class="device" rowspan="4">Router3</td>
+              <td class="interface">Serial 0/0</td>
+              <td class="ip">198.51.100.6</td>
+              <td class="mask">255.255.255.252</td>
+            </tr>
+            <tr>
+              <td class="interface">FastEthernet 1/0</td>
+              <td class="ip">10.10.30.1</td>
+              <td class="mask">255.255.255.0</td>
+            </tr>
+            <tr>
+              <td class="interface">Loopback 0</td>
+              <td class="ip">203.0.113.3</td>
+              <td class="mask">255.255.255.255</td>
+            </tr>
+            <tr>
+              <td class="interface">Tunnel 0</td>
+              <td class="ip">192.168.0.2</td>
+              <td class="mask">255.255.255.252</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="topology-caption">HOST ADDRESSING</div>
+        <table class="topology-table">
+          <thead>
+            <tr>
+              <th>Device</th>
+              <th>IP Address</th>
+              <th>Subnet Mask</th>
+              <th>Default Gateway</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="device">PC1</td>
+              <td class="ip">10.10.10.100</td>
+              <td class="mask">255.255.255.0</td>
+              <td class="gateway">10.10.10.1</td>
+            </tr>
+            <tr>
+              <td class="device">PC3</td>
+              <td class="ip">10.10.30.100</td>
+              <td class="mask">255.255.255.0</td>
+              <td class="gateway">10.10.30.1</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
+      <div class="topology-note"><strong>GRE tunnel overlay:</strong> <code>Router1 Tunnel0 192.168.0.1/30 ↔ Router3 Tunnel0 192.168.0.2/30</code></div>
       <p>Router1 and Router3 sit at opposite ends of a routed WAN, with Router2 acting as the transit device between them. The WAN underlay already provides reachability between the GRE source and destination addresses. GRE then builds a logical point-to-point overlay between Router1 and Router3, and static routes are added so each edge router knows to send remote-LAN traffic through that tunnel.</p>
     </section>
 
