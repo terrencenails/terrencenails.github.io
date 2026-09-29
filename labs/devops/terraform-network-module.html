@@ -136,24 +136,24 @@
 <section>
 <span class="section-tag">// OBJECTIVE</span>
 <h2>Why this project</h2>
-<p>The Azure and network security projects in this portfolio applied changes directly through CLI workflows. Terraform changes that model: the network's desired state is written down first as declarative configuration, and a plan can be generated and reviewed <em>before</em> changes are applied to the cloud. This project builds a real multi-tier VPC that way, then goes a step further — refactoring the flat configuration into a reusable module with input variables, and deliberately introducing a manual change outside of Terraform to see whether <code>terraform plan</code> actually catches it.</p>
+<p>This project follows the complete Terraform lab workflow: access the pre-built Terraform host, verify Terraform and AWS credentials, define a multi-tier AWS network, initialize and deploy it, verify Terraform state, destroy the initial deployment, refactor the configuration into a reusable module, redeploy the modular version, and finally simulate and detect infrastructure drift.</p>
 </section>
 <section>
 <span class="section-tag">// SETUP</span>
 <h2>Accessing the Terraform host and verifying tooling</h2>
 <div class="sandbox-notice">
 <span class="tag">⚠ LAB ENVIRONMENT — IDENTIFIERS SHOWN INTENTIONALLY</span>
-<p>This project was performed in a disposable lab environment. Some screenshots intentionally retain lab-only values such as a temporary EC2 public IP, AWS account and role identifiers, instance/resource IDs, SSH fingerprints, and temporary infrastructure names.</p>
-<p>In a real-world production environment, documentation, environment-specific identifiers, credentials, internal naming, SSH fingerprints, and any IP address tied to a real user, site, or organization would be redacted.</p>
+<p>This project was completed in a disposable training environment. Some screenshots intentionally retain lab-only values such as the temporary cloud-server public IP, SSH fingerprint, AWS account/role identifiers, instance and resource IDs, and temporary infrastructure names so the lab workflow remains visible.</p>
+<p>In production documentation, environment-specific identifiers, credentials, internal naming, SSH fingerprints, and IP addresses tied to a real user, site, or organization would be redacted.</p>
 </div>
 <div class="step">
 <div class="step-head"><span class="step-num">01</span><h3>SSH into the provisioned Terraform host</h3></div>
-<p>Connected over SSH to a pre-built instance with Terraform and the AWS CLI already installed. Accepting the host key on first connect and authenticating with the supplied credentials is the same trust-on-first-use model any new SSH host uses — the fingerprint prompt exists specifically so a connection can be recognized (and questioned) if it ever changes unexpectedly on a later connection.</p>
+<p>Copied the lab's temporary Cloud Server public IP, opened the Instant Terminal, and connected with <code>ssh cloud_user@&lt;&lt;Public IP&gt;&gt;</code>. On the first connection I accepted the SSH host-key prompt and authenticated with the password supplied by the lab.</p>
 <img alt="SSH login to the Terraform host, accepting the host key and entering the password" src="assets/terraform-network/01-ssh-login.png"/>
-<div class="prod-note"><strong>IN PRODUCTION</strong><p>The temporary EC2 public IP and SSH host fingerprint shown here are lab values. Production screenshots would redact or crop environment-specific connection details when they are not required for the documentation.</p></div></div>
+<div class="prod-note"><strong>IN PRODUCTION</strong><p>The cloud-server public IP and SSH host fingerprint shown here are lab values. Production screenshots would normally crop or redact environment-specific connection details when they are not needed.</p></div></div>
 <div class="step">
 <div class="step-head"><span class="step-num">02</span><h3>Confirm the Terraform version</h3></div>
-<p><code>terraform version</code> confirms the binary is actually on the PATH and reports which release is installed (1.14.3 here). Checking this before writing any configuration matters because Terraform's language and provider compatibility do shift between versions — knowing the exact version up front avoids chasing a syntax or behavior difference that's actually just a version mismatch later.</p>
+<p>Ran <code>terraform version</code> to confirm Terraform is installed and accessible from the command line. The lab expects a Terraform <code>1.14.x</code> release, so this check verifies the host is ready before configuration work begins.</p>
 <img alt="terraform version output showing Terraform v1.14.3" src="assets/terraform-network/02-terraform-version.png"/>
 <div class="cmd-note">
 <strong>WHAT THIS DOES</strong>
@@ -162,13 +162,13 @@
 </div>
 <div class="step">
 <div class="step-head"><span class="step-num">03</span><h3>Confirm AWS credentials are available</h3></div>
-<p><code>aws sts get-caller-identity</code> confirms the instance has a live, working set of AWS credentials — in this case an assumed IAM role rather than a hardcoded access key. This is worth confirming before writing a single line of Terraform: if the provider has nothing valid to authenticate with, every later command fails on credentials, not on anything actually wrong with the configuration — and it's much faster to rule that out now than to debug it after the fact.</p>
+<p>Ran <code>aws sts get-caller-identity</code> to verify AWS credentials are available on the instance. The returned <code>UserId</code>, <code>Account</code>, and <code>Arn</code> identify the IAM role attached to the lab host and confirm AWS authentication is working before Terraform begins provisioning resources.</p>
 <img alt="aws sts get-caller-identity output confirming the assumed IAM role identity" src="assets/terraform-network/03-aws-identity-check.png"/>
 <div class="cmd-note">
 <strong>WHAT THE OUTPUT MEANS</strong>
 <p>The returned account ID, user ID, and role ARN together confirm "yes, these credentials work and this is who AWS thinks is making requests" — before Terraform ever tries to use them.</p>
 </div>
-<div class="prod-note"><strong>IN PRODUCTION</strong><p>The AWS account ID, assumed-role ARN, and STS user/session identifier shown here are lab-only identifiers. Production documentation would normally redact them even though they are not secret access credentials.</p></div></div>
+<div class="prod-note"><strong>IN PRODUCTION</strong><p>The AWS account ID, STS UserId/session identifier, and role ARN are lab identifiers. Production documentation would normally redact these environment-specific values even though they are not secret access keys.</p></div></div>
 <div class="step">
 <div class="step-head"><span class="step-num">04</span><h3>Create the project directory</h3></div>
 <p>A dedicated <code>globomantics-network</code> directory keeps this project's state file, lock file, and configuration isolated from anything else on the host. Terraform tracks state per working directory — mixing multiple projects into one folder risks one project's <code>plan</code> or <code>apply</code> reading or modifying state that belongs to something else entirely.</p>
@@ -181,7 +181,7 @@
 <p>Rather than one large file typed all at once, the configuration was built up in the order Terraform actually needs to reason about it: provider first, then the resources that depend on each other in sequence. Each block below was appended with a separate heredoc so the file's history stays legible as a sequence of deliberate additions, not one indistinguishable wall of HCL.</p>
 <div class="step">
 <div class="step-head"><span class="step-num">05</span><h3>Declare the AWS provider</h3></div>
-<p>The <code>required_providers</code> block constrains the AWS provider to <code>~&gt; 5.0</code> — a pessimistic constraint that allows compatible 5.x releases but blocks a 6.x major version from being selected silently. The constraint limits which versions are acceptable; the exact selected version is recorded later in <code>.terraform.lock.hcl</code>.</p>
+<p>The <code>required_providers</code> block specifies the HashiCorp AWS provider with the pessimistic version constraint <code>~&gt; 5.0</code>, allowing 5.x releases. The separate <code>provider "aws"</code> block sets the deployment region to <code>us-east-1</code>.</p>
 <img alt="Heredoc creating main.tf with the terraform required_providers block and aws provider block" src="assets/terraform-network/05-main-tf-provider-heredoc.png"/>
 </div>
 <div class="step">
@@ -191,22 +191,22 @@
 </div>
 <div class="step">
 <div class="step-head"><span class="step-num">07</span><h3>Add the VPC</h3></div>
-<p>The VPC uses a <code>/16</code> CIDR (<code>10.1.0.0/16</code>) — deliberately larger than the two initial /24 subnets so the lab has room to grow. <code>enable_dns_support</code> and <code>enable_dns_hostnames</code> are both set explicitly rather than left as defaults. <code>enable_dns_support</code> controls use of the Amazon-provided DNS resolver, while <code>enable_dns_hostnames</code> controls whether eligible instances receive DNS hostnames.</p>
+<p>Added the VPC with CIDR <code>10.1.0.0/16</code> and enabled DNS support and DNS hostnames, matching the lab configuration. The /16 provides the parent address space from which the public and private /24 subnets are created.</p>
 <img alt="Heredoc appending the aws_vpc resource block to main.tf" src="assets/terraform-network/07-vpc-heredoc.png"/>
 </div>
 <div class="step">
 <div class="step-head"><span class="step-num">08</span><h3>Add the public and private subnets</h3></div>
-<p>Two <code>/24</code> subnets are carved from the VPC's <code>/16</code>. The public subnet uses <code>map_public_ip_on_launch = true</code>, which automatically assigns public IPv4 addresses to eligible instances launched there. That flag does <strong>not</strong> make the subnet public by itself — the public/private distinction comes from routing. The public subnet becomes public after its associated route table receives a default route to the Internet Gateway.</p>
+<p>Created the two subnets from the lab guide: <code>10.1.1.0/24</code> for the public subnet and <code>10.1.2.0/24</code> for the private subnet, both in <code>us-east-1a</code>. The public subnet sets <code>map_public_ip_on_launch = true</code>; the next step completes the intended public/private routing behavior by associating each subnet with its route table.</p>
 <img alt="Heredoc appending the public and private aws_subnet resource blocks to main.tf" src="assets/terraform-network/08-subnets-heredoc.png"/>
 </div>
 <div class="step">
 <div class="step-head"><span class="step-num">09</span><h3>Add the Internet Gateway, route tables, and associations</h3></div>
-<p>The public route table gets an explicit <code>0.0.0.0/0</code> route pointed at the Internet Gateway; the private route table gets no internet default route at all. That routing difference is what keeps the private subnet from having direct internet connectivity in this lab.</p>
+<p>Added the Internet Gateway, the public and private route tables, and both route-table associations. The public route table contains a default route <code>0.0.0.0/0</code> to the Internet Gateway, while the private route table has no internet route, matching the lab's isolated-private-subnet design.</p>
 <img alt="Heredoc appending the internet gateway, route tables, and route table association resource blocks to main.tf" src="assets/terraform-network/09-igw-routetables-heredoc.png"/>
-<div class="prod-note"><strong>IN PRODUCTION</strong><p>A private subnet commonly still needs outbound-only internet access for updates or package retrieval. In that design, its default route would typically point to a NAT Gateway rather than directly to an Internet Gateway.</p></div></div>
+</div>
 <div class="step">
 <div class="step-head"><span class="step-num">10</span><h3>Add the security group</h3></div>
-<p>The web security group allows inbound HTTP (80) and SSH (22) from <code>0.0.0.0/0</code>, with all outbound traffic permitted. Scoping both ingress rules to any source is a deliberate shortcut for this lab, not an oversight — flagged directly in the lab's own guidance as something to narrow in a real deployment.</p>
+<p>Added the web security group with inbound HTTP on port 80 and SSH on port 22 from <code>0.0.0.0/0</code>, plus an egress rule permitting all outbound traffic. This matches the lab configuration.</p>
 <img alt="Heredoc appending the aws_security_group resource block with HTTP and SSH ingress rules to main.tf" src="assets/terraform-network/10-security-group-heredoc.png"/>
 <div class="prod-note">
 <strong>IN PRODUCTION</strong>
@@ -235,11 +235,11 @@
 <div class="step">
 <span class="status-tag ok" style="margin-top:20px;">✓ INITIALIZED</span>
 <div class="step-head"><span class="step-num">12</span><h3>Run <code>terraform init</code></h3></div>
-<p>Terraform reads the <code>required_providers</code> block, downloads the matching AWS provider plugin (v5.100.0, satisfying the <code>~&gt; 5.0</code> constraint), and writes a <code>.terraform.lock.hcl</code> file recording the selected provider version. When that lock file is committed and shared with the configuration, other users and environments can reuse the same provider selection instead of resolving a different compatible release later.</p>
+<p>Ran <code>terraform init</code> to initialize the working directory and download the required AWS provider plugin. Terraform also created the dependency lock file for the provider selection used by this working directory.</p>
 <img alt="terraform init output showing the AWS provider being installed and the lock file being created" src="assets/terraform-network/14-terraform-init.png"/>
 <div class="cmd-note">
 <strong>WHAT THIS DOES</strong>
-<p><code>terraform init</code> prepares the working directory by installing required providers, initializing modules and backend configuration as applicable, and creating or updating the dependency lock file. It does not itself create infrastructure.</p>
+<p><code>terraform init</code> prepares a working directory to be used with Terraform — downloading the provider plugin it needs and setting up local state tracking. It's the one command that has to run first, before <code>plan</code> or <code>apply</code> will work at all.</p>
 </div>
 </div>
 <div class="step">
@@ -254,7 +254,7 @@
 <div class="step">
 <span class="status-tag warn" style="margin-top:20px;">9 TO ADD, 0 TO CHANGE, 0 TO DESTROY</span>
 <div class="step-head"><span class="step-num">14</span><h3>Run <code>terraform plan</code></h3></div>
-<p>This is the step that makes Terraform fundamentally different from the CLI work in the earlier projects: nothing has been created in AWS yet. The plan is a dry run — Terraform reads the configuration, compares it against the (currently empty) state file, and reports exactly what it intends to do before doing it. Reviewing a plan like this is the point where a mistake gets caught on a printout instead of in a live account — an oversized CIDR block or an accidentally-public subnet is far cheaper to fix here than after <code>apply</code>.</p>
+<p>Ran <code>terraform plan</code> to preview the execution plan before deployment. The expected result is <strong>9 resources to be added</strong>, matching the VPC, two subnets, Internet Gateway, two route tables, two route-table associations, and security group defined in the configuration.</p>
 <img alt="terraform plan output, top: internet gateway and route table resources to be created" src="assets/terraform-network/16-terraform-plan-top.png"/>
 <img alt="terraform plan output: route table associations and start of the security group resource" src="assets/terraform-network/17-terraform-plan-sg-routes.png"/>
 <img alt="terraform plan output: security group SSH ingress rule and the private subnet resource" src="assets/terraform-network/18-terraform-plan-ssh-ingress.png"/>
@@ -274,51 +274,51 @@
 <div class="step">
 <span class="status-tag ok" style="margin-top:20px;">✓ APPLY COMPLETE</span>
 <div class="step-head"><span class="step-num">15</span><h3>Run <code>terraform apply</code></h3></div>
-<p>Confirming with <code>yes</code> at the interactive prompt allows Terraform to create the AWS resources. Because this workflow did not save the earlier plan with <code>terraform plan -out=...</code>, <code>terraform apply</code> generates a fresh execution plan before applying it. The result still matched the intended build: nine resources created.</p>
-
+<p>Ran <code>terraform apply</code> and entered <code>yes</code> at the confirmation prompt to provision the network infrastructure defined in <code>main.tf</code>.</p>
+<img alt="terraform apply completing with Apply complete! Resources: 9 added, 0 changed, 0 destroyed" src="assets/terraform-network/20-flat-apply-complete.png"/>
 <div class="cmd-note">
 <strong>WHAT THIS DOES</strong>
-<p><code>terraform apply</code> creates or changes infrastructure to match the configuration. Without a saved plan file, it generates a new execution plan and asks for confirmation before applying it. To apply the exact plan reviewed earlier, the workflow would use <code>terraform plan -out=tfplan</code> followed by <code>terraform apply tfplan</code>.</p>
+<p><code>terraform apply</code> re-runs the same plan and, once confirmed, actually creates the resources in AWS. <code>Apply complete! Resources: 9 added</code> is Terraform confirming every one of those nine resources now really exists in the account.</p>
 </div>
 <div class="prod-note">
 <strong>IN PRODUCTION</strong>
 <p>Changes would go through a reviewed, approved pipeline rather than a person typing <code>yes</code> at their own terminal — a standard change-management baseline for infrastructure as code.</p>
 </div>
-<img alt="terraform apply command being started" src="assets/terraform-network/20-flat-apply-complete.png"/><img alt="terraform apply completion showing 9 resources added, 0 changed, 0 destroyed" src="assets/terraform-network/21-state-list-flat.png"/></div>
+</div>
 <div class="step">
 <div class="step-head"><span class="step-num">16</span><h3>Confirm what Terraform is now tracking</h3></div>
-<p><code>terraform state list</code> enumerates every resource Terraform believes it owns and is responsible for managing going forward. This matters beyond a sanity check: anything <em>not</em> in this list — even if it exists in AWS — is invisible to Terraform and won't be touched, updated, or protected by any future <code>plan</code> or <code>apply</code> against this configuration.</p>
-
+<p>Ran <code>terraform state list</code> to verify the deployed resources are tracked in Terraform state. The expected output contains all nine resources from the lab configuration.</p>
+<img alt="terraform state list showing all nine resources tracked in state" src="assets/terraform-network/21-state-list-flat.png"/>
 <div class="prod-note">
 <strong>IN PRODUCTION</strong>
 <p>State would live in a shared, locked remote backend rather than a single local file — a standard baseline for teams collaborating safely on the same infrastructure.</p>
 </div>
-<img alt="terraform state list showing all nine flat-configuration resources tracked in state" src="assets/terraform-network/22-show-vpc-attributes.png"/></div>
+</div>
 <div class="step">
-<div class="step-head"><span class="step-num">17</span><h3>Inspect the resource attributes recorded in state</h3></div>
-<p><code>terraform show</code> piped through <code>grep</code> displays the resource attributes Terraform recorded in state after the apply, including IDs and AWS-assigned values such as the default route table and default security group. Cross-checking the CIDR blocks this way confirms Terraform's recorded state matches what the configuration declared.</p>
-
-<div class="prod-note"><strong>IN PRODUCTION</strong><p>The VPC ID, route-table ID, security-group ID, DHCP options ID, ARN, and similar cloud resource identifiers shown in state are lab values. Production screenshots would normally redact environment-specific resource identifiers.</p></div><img alt="terraform show output displaying VPC attributes recorded in state" src="assets/terraform-network/23-destroy-confirm.png"/><img alt="terraform show and grep output displaying CIDR values recorded in state" src="assets/terraform-network/24-destroy-complete-state-empty.png"/></div>
+<div class="step-head"><span class="step-num">17</span><h3>Inspect the VPC and subnet CIDRs</h3></div>
+<p>Used <code>terraform show | grep -A 15 "aws_vpc.globomantics"</code> to inspect the VPC resource details, then <code>terraform show | grep cidr_block</code> to verify the VPC, public-subnet, and private-subnet CIDR blocks match <code>10.1.0.0/16</code>, <code>10.1.1.0/24</code>, and <code>10.1.2.0/24</code>.</p>
+<img alt="terraform show output for the VPC resource, and a grep for cidr_block across all resources" src="assets/terraform-network/22-show-vpc-attributes.png"/>
+<div class="prod-note"><strong>IN PRODUCTION</strong><p>The VPC ID and other AWS-generated resource identifiers shown by Terraform are lab values. Production screenshots would normally redact environment-specific resource IDs unless they are required for the procedure.</p></div></div>
 </section>
 <section>
 <span class="section-tag">// TEARDOWN</span>
 <h2>Destroying the flat configuration</h2>
-<p>Before refactoring into a module, the flat deployment is torn down completely rather than modified in place. Migrating live infrastructure to a module without destroying first is possible (via <code>terraform state mv</code>), but destroying and rebuilding is the more honest way to prove the module produces an equivalent result from scratch — no leftover state entries masking a mistake in the refactor.</p>
+<p>Following the lab guide, the initial flat configuration is destroyed before the network is refactored into a reusable Terraform module. After the destroy completes, <code>terraform state list</code> is used to verify the state is clean.</p>
 <div class="step">
 <div class="step-head"><span class="step-num">18</span><h3>Confirm the destroy</h3></div>
 <p>Terraform requires typing <code>yes</code> in full at this prompt — not <code>y</code> — specifically because destroy is irreversible and the extra keystrokes are a deliberate speed bump against confirming out of habit.</p>
-
+<img alt="terraform destroy confirmation prompt requiring the full word yes" src="assets/terraform-network/23-destroy-confirm.png"/>
 <div class="cmd-note">
 <strong>WHAT THIS DOES</strong>
 <p><code>terraform destroy</code> deletes every resource Terraform is currently tracking in state — the exact reverse of <code>apply</code>. Typing the full word <code>yes</code> (not just <code>y</code>) is Terraform's way of making sure this specific, irreversible action was really intended.</p>
 </div>
-<img alt="terraform destroy confirmation prompt requiring the full word yes" src="assets/terraform-network/25-module-variables-heredoc.png"/></div>
+</div>
 <div class="step">
 <span class="status-tag ok" style="margin-top:20px;">✓ STATE CLEAN</span>
 <div class="step-head"><span class="step-num">19</span><h3>Verify nothing remains</h3></div>
 <p><code>terraform state list</code> returning nothing confirms the teardown is complete and Terraform's state file is empty — the same clean slate the NSG project confirmed before adding its first custom rule. Starting the module refactor against a genuinely empty state means the next <code>apply</code> is a real creation, not a silent no-op against resources that technically still existed.</p>
-
-<img alt="Destroy complete message followed by an empty terraform state list" src="assets/terraform-network/26-module-main-tf-top.png"/></div>
+<img alt="Destroy complete message followed by an empty terraform state list" src="assets/terraform-network/24-destroy-complete-state-empty.png"/>
+</div>
 </section>
 <section>
 <span class="section-tag">// MODULARIZE</span>
@@ -326,67 +326,71 @@
 <p>The flat configuration hardcoded every value directly in the resource blocks — fine for a one-off, but it means the same network topology can't be stood up again for a different project or environment without copy-pasting and manually re-editing CIDR blocks and names throughout. Moving the resources into <code>modules/network</code> and replacing hardcoded values with <code>var.*</code> references turns this from a single network into a template for any number of them.</p>
 <div class="step">
 <div class="step-head"><span class="step-num">20</span><h3>Scaffold the module and declare its inputs</h3></div>
-<p><code>modules/network/variables.tf</code> declares five inputs — VPC CIDR, both subnet CIDRs, availability zone, and a project name used for tagging — each with a sensible default matching the original flat configuration. Giving every variable a default means the module works out of the box with zero required arguments, while still being fully overridable by whatever calls it.</p>
-
-<img alt="mkdir modules/network and write modules/network/variables.tf with five input variables" src="assets/terraform-network/27-module-main-tf-mid.png"/></div>
+<p>Created <code>modules/network/</code>, then created <code>variables.tf</code> with the five inputs from the lab guide: VPC CIDR, public subnet CIDR, private subnet CIDR, availability zone, and project name. Each variable uses the same default values as the original flat configuration.</p>
+<img alt="mkdir -p modules/network followed by a heredoc writing modules/network/variables.tf with five input variables" src="assets/terraform-network/25-module-variables-heredoc.png"/>
+</div>
 <div class="step">
 <div class="step-head"><span class="step-num">21</span><h3>Move the resources into the module, parameterized</h3></div>
-<p>The VPC, both subnets, the Internet Gateway, and the public route table are the same resources as before, but every literal value that used to be hardcoded — CIDR blocks, the availability zone, the <code>globomantics</code> name — is now a <code>var.*</code> reference. The <code>${var.project_name}-vpc</code>-style tags let different callers produce consistent, environment-specific naming without manually editing every resource block. AWS Name tags are labels, not unique identifiers, so they should not be treated as collision-proof resource identities.</p>
-
-<img alt="Top portion of parameterized modules/network/main.tf" src="assets/terraform-network/28-module-main-tf-tail.png"/></div>
+<p>Created <code>modules/network/main.tf</code> and moved the network resources into the module. The configurable values are replaced with <code>var.*</code> references so the same topology can be reused with different CIDRs, availability zones, and project tags.</p>
+<img alt="Heredoc writing modules/network/main.tf, top portion: parameterized VPC, subnets, internet gateway, and public route table" src="assets/terraform-network/26-module-main-tf-top.png"/>
+</div>
 <div class="step">
 <div class="step-head"><span class="step-num">22</span><h3>The remaining resources, same treatment</h3></div>
-<p>The private route table, both route table associations, and the security group complete the module. The security group's HTTP and SSH ingress rules are still scoped to <code>0.0.0.0/0</code> here — parameterizing the resource names doesn't automatically fix the rule scope; that's a separate concern a module refactor doesn't solve on its own.</p>
-
-
+<p>Completed the module resource definitions with the private route table, both route-table associations, and the web security group. The security-group rules remain the same as the original lab configuration: HTTP and SSH inbound from <code>0.0.0.0/0</code> and all outbound traffic permitted.</p>
+<img alt="Continuation of modules/network/main.tf heredoc: private route table, route table associations" src="assets/terraform-network/27-module-main-tf-mid.png"/>
+<img alt="End of modules/network/main.tf heredoc: security group with HTTP and SSH ingress and open egress, closing the EOF" src="assets/terraform-network/28-module-main-tf-tail.png"/>
 <div class="prod-note">
 <strong>IN PRODUCTION</strong>
 <p>A module boundary doesn't substitute for scoped access — the ingress rules themselves would still be narrowed to only what's needed, the same least-privilege baseline that applies whether the rule lives in a flat configuration or a reusable module.</p>
 </div>
-<img alt="Remaining module resources including route tables, associations, and security group" src="assets/terraform-network/29-module-outputs-heredoc.png"/></div>
+</div>
 <div class="step">
 <div class="step-head"><span class="step-num">23</span><h3>Expose the module's outputs</h3></div>
-<p><code>modules/network/outputs.tf</code> surfaces five resource IDs — the VPC, both subnets, the gateway, and the security group — using their bare in-module resource references (<code>aws_vpc.globomantics.id</code>, not <code>var.something</code>). Outputs are how a module hands identifiers back to whatever calls it; without these, nothing outside the module could reference the VPC it just created, making the module a dead end instead of something composable with other configuration.</p>
-
-<img alt="Heredoc writing modules/network/outputs.tf with five resource ID outputs" src="assets/terraform-network/30-module-files-verify.png"/></div>
+<p>Created <code>modules/network/outputs.tf</code> with five outputs from the lab guide: VPC ID, public subnet ID, private subnet ID, Internet Gateway ID, and security group ID.</p>
+<img alt="Heredoc writing modules/network/outputs.tf exposing five resource ID outputs" src="assets/terraform-network/29-module-outputs-heredoc.png"/>
+</div>
 <div class="step">
 <div class="step-head"><span class="step-num">24</span><h3>Confirm the module's files on disk</h3></div>
-<p>A quick <code>ls</code> confirms all three files — <code>main.tf</code>, <code>outputs.tf</code>, <code>variables.tf</code> — actually landed in <code>modules/network/</code> before anything tries to call the module and fails on a missing file.</p>
-
-<img alt="ls modules/network showing main.tf, outputs.tf, and variables.tf" src="assets/terraform-network/31-root-main-tf-module-block.png"/></div>
+<p>Ran <code>ls modules/network/</code> and confirmed the module contains the three expected files: <code>main.tf</code>, <code>outputs.tf</code>, and <code>variables.tf</code>.</p>
+<img alt="ls modules/network/ listing main.tf, outputs.tf, and variables.tf" src="assets/terraform-network/30-module-files-verify.png"/>
+</div>
 <div class="step">
 <div class="step-head"><span class="step-num">25</span><h3>Rewrite the root configuration to call the module</h3></div>
-<p>The root <code>main.tf</code> shrinks from nine resource blocks down to a single <code>module "network"</code> block with <code>source = "./modules/network"</code> and five input arguments. This is the actual payoff of the refactor: the root configuration now reads as a declaration of <em>intent</em> ("give me a network with these parameters") rather than a list of every individual resource that implements it.</p>
-
+<p>Rewrote the root <code>main.tf</code> so it keeps the AWS provider declaration and calls <code>module "network"</code> from <code>./modules/network</code>, passing the same CIDR, availability-zone, and project-name values used in the original deployment.</p>
+<img alt="Heredoc rewriting the root main.tf to call the network module with explicit input values" src="assets/terraform-network/31-root-main-tf-module-block.png"/>
 <div class="prod-note">
 <strong>IN PRODUCTION</strong>
 <p>A shared module would be versioned and referenced by a pinned release rather than a local relative path — a standard reproducibility baseline, the same principle behind pinning a provider version.</p>
 </div>
-<img alt="Root main.tf rewritten to call the local network module with explicit inputs" src="assets/terraform-network/32-root-outputs-tf-heredoc.png"/></div>
+</div>
 <div class="step">
 <div class="step-head"><span class="step-num">26</span><h3>Re-expose the module's outputs at the root</h3></div>
-<p>A root-level <code>outputs.tf</code> forwards each of the module's five outputs (<code>module.network.vpc_id</code>, and so on) so they're still visible to anyone running <code>terraform output</code> against this configuration — module outputs don't automatically bubble up to the root; each one has to be explicitly re-declared to stay visible from outside.</p>
-
-<img alt="Root outputs.tf forwarding the network module outputs" src="assets/terraform-network/33-module-terraform-init.png"/></div>
+<p>Created a root-level <code>outputs.tf</code> that exposes the module's five output values through references such as <code>module.network.vpc_id</code>.</p>
+<img alt="Heredoc writing the root outputs.tf, forwarding each module output" src="assets/terraform-network/32-root-outputs-tf-heredoc.png"/>
+</div>
 <div class="step">
 <span class="status-tag ok" style="margin-top:20px;">✓ MODULE REGISTERED</span>
 <div class="step-head"><span class="step-num">27</span><h3>Re-initialize to register the module</h3></div>
-<p><code>terraform init</code> run again after introducing a module reports <code>Initializing modules...</code> and resolves <code>network</code> to <code>modules/network</code> — a second, distinct initialization step beyond the provider plugin download from step 12. Terraform has to be told about a module's existence the same way it's told about a provider before anything referencing it will work.</p>
-
-<img alt="terraform init registering the network module and reusing the locked AWS provider version" src="assets/terraform-network/34-drift-detection-plan.png"/></div>
+<p>Ran <code>terraform init</code> again after introducing the module so Terraform could register the local <code>network</code> module before planning or applying the modular configuration.</p>
+<img alt="terraform init output showing the network module being initialized alongside the existing provider plugin" src="assets/terraform-network/33-module-terraform-init.png"/>
+</div>
+<div class="step">
+<div class="step-head"><span class="step-num">28</span><h3>Plan and apply the modular configuration</h3></div>
+<p>Following the lab guide, I ran <code>terraform plan</code> and verified the modular configuration still proposed <strong>9 resources to be added</strong>. I then ran <code>terraform apply</code>, entered <code>yes</code>, and redeployed the same network through <code>module.network</code>. These two commands were completed as part of the lab but were not captured as separate screenshots.</p>
+</div>
 <div class="callout">
-<p><strong>Result:</strong> <code>terraform plan</code> and <code>terraform apply</code> against the modular configuration (not separately pictured here) reproduce the identical nine resources, now all addressed as <code>module.network.*</code> in state — confirmed directly in the drift-detection plan output below, where every resource is listed under that same <code>module.network.</code> prefix.</p>
+<p><strong>Result:</strong> the original flat configuration was rebuilt through a reusable network module using the same nine-resource topology.</p>
 </div>
 </section>
 <section>
 <span class="section-tag">// DRIFT DETECTION</span>
 <h2>Simulating and catching an out-of-band change</h2>
-<p>With the modular network deployed, a tag was added directly to the VPC through the AWS CLI — <code>aws ec2 create-tags ... Key=ModifiedBy,Value=ManualChange</code> — deliberately bypassing Terraform entirely. This is meant to simulate the single most common way infrastructure actually drifts in the real world: not malice, just someone making a quick fix through the Console or CLI under time pressure and never circling back to update the configuration that's supposed to be the source of truth.</p>
-<div class="step">
+<p>With the modular network deployed, the lab introduces an out-of-band VPC tag through the AWS CLI, then uses <code>terraform plan</code> to detect the drift, <code>terraform apply</code> to reconcile it, and a final <code>terraform plan</code> to verify that the infrastructure once again matches the configuration.</p>
+<div class="step"><div class="step-head"><span class="step-num">29</span><h3>Introduce an out-of-band VPC tag</h3></div><p>Used the AWS CLI command <code>aws ec2 create-tags --resources $(terraform output -raw vpc_id) --tags Key=ModifiedBy,Value=ManualChange</code> to modify the VPC outside of Terraform, matching the lab's drift-simulation step.</p></div><div class="step">
 <span class="status-tag warn" style="margin-top:20px;">DRIFT DETECTED</span>
-<div class="step-head"><span class="step-num">28</span><h3>Run <code>terraform plan</code> after the manual change</h3></div>
+<div class="step-head"><span class="step-num">30</span><h3>Run <code>terraform plan</code> after the manual change</h3></div>
 <p>Terraform's plan immediately flags the VPC as needing an <em>update in-place</em> — not because the manual tag is inherently wrong, but because it doesn't match what the configuration says should be there. The plan proposes removing <code>ModifiedBy = "ManualChange"</code> specifically, because that key exists in real AWS state but nowhere in the HCL. This is the entire point of drift detection: Terraform doesn't need to be told what changed outside its knowledge — comparing declared state against real state surfaces it automatically.</p>
-
+<img alt="terraform plan output detecting the manually-added ModifiedBy tag and proposing to remove it, Plan: 0 to add, 1 to change, 0 to destroy" src="assets/terraform-network/34-drift-detection-plan.png"/>
 <div class="cmd-note">
 <strong>WHAT THE OUTPUT MEANS</strong>
 <p>A <code>~</code> next to the VPC means "update in place," and the line under it shows exactly which field changed — here, a tag that exists in AWS but not in the HCL. <code>Plan: 0 to add, 1 to change, 0 to destroy</code> confirms this is purely a correction, not a rebuild.</p>
@@ -395,20 +399,20 @@
 <strong>IN PRODUCTION</strong>
 <p>Drift detection would run on a schedule automatically rather than depending on someone happening to run <code>plan</code> by hand — a standard continuous-compliance baseline.</p>
 </div>
-<img alt="terraform plan detecting the manually added ModifiedBy tag and proposing an in-place correction" src="assets/terraform-network/35-drift-correction-apply.png"/></div>
+</div>
 <div class="step">
 <span class="status-tag ok" style="margin-top:20px;">✓ DRIFT CORRECTED</span>
-<div class="step-head"><span class="step-num">29</span><h3>Apply to reconcile real state with configuration</h3></div>
-<p>Confirming this plan removes the out-of-band tag, bringing that Terraform-managed attribute back in line with the configuration. Terraform does not infer why the tag was added; it compares managed configuration against refreshed remote state. For attributes this configuration manages, differences are treated as drift unless they are explicitly ignored or handled through another lifecycle/configuration choice.</p>
-
-<img alt="terraform apply removing the manually added ModifiedBy tag, with one resource changed" src="assets/terraform-network/37-final-plan-no-changes-2.png"/></div>
+<div class="step-head"><span class="step-num">31</span><h3>Apply to reconcile real state with configuration</h3></div>
+<p>Confirming this plan removes the out-of-band tag, bringing AWS back in line with what <code>main.tf</code> actually declares. Worth being precise about what just happened: Terraform didn't know or care <em>why</em> the tag was added — it doesn't distinguish a well-intentioned manual fix from a mistake or something malicious. Anything not declared in the configuration is, by definition, not supposed to be there.</p>
+<img alt="terraform apply confirming and removing the ModifiedBy tag, Apply complete! Resources: 0 added, 1 changed, 0 destroyed" src="assets/terraform-network/35-drift-correction-apply.png"/>
+</div>
 <div class="step">
 <span class="status-tag ok" style="margin-top:20px;">✓ NO DRIFT REMAINING</span>
-<div class="step-head"><span class="step-num">30</span><h3>Confirm the fix with a final plan</h3></div>
+<div class="step-head"><span class="step-num">32</span><h3>Confirm the fix with a final plan</h3></div>
 <p>A closing <code>terraform plan</code> returns <strong>No changes. Your infrastructure matches the configuration.</strong> — the same verification instinct as re-confirming the NSG rule's position in the Azure project rather than trusting the previous apply's success message alone.</p>
-
-
-<img alt="final terraform plan showing no changes and infrastructure matching the configuration" src="assets/terraform-network/36-final-plan-no-changes-1.png"/></div>
+<img alt="terraform plan re-checking every module resource after the drift correction" src="assets/terraform-network/36-final-plan-no-changes-1.png"/>
+<img alt="terraform plan output ending in No changes, Your infrastructure matches the configuration" src="assets/terraform-network/37-final-plan-no-changes-2.png"/>
+</div>
 <div class="callout">
 <p><strong>Result:</strong> a manual, out-of-band change was introduced, detected by comparing declared configuration against real infrastructure, and corrected — without ever touching the AWS Console. The configuration in <code>main.tf</code> remained the single source of truth throughout.</p>
 </div>
@@ -416,14 +420,10 @@
 <section>
 <span class="section-tag">// TAKEAWAYS</span>
 <h2>What this demonstrates</h2>
-<ul class="takeaways">
-<li>The entire network's desired state was written down and reviewed via <code>terraform plan</code> before a single resource existed — a fundamentally different discipline than the CLI-driven work in the Azure and network security projects, where every command took effect the moment it was run.</li>
-<li><code>terraform plan</code> isn't only a pre-apply preview; run again after the fact, it's a drift-detection tool that catches infrastructure quietly diverging from its own configuration, which is exactly what happened when the VPC was tagged manually outside of Terraform.</li>
-<li>Refactoring working, already-deployed resources into a module — rather than writing the module first — forced the parameterization to be grounded in something that had actually been proven to work, instead of guessing at the right variables up front.</li>
-</ul>
+<ul class="takeaways"><li>Terraform can define the entire multi-tier network as code, preview the proposed changes with terraform plan, deploy them with terraform apply, and track the resulting resources in state.</li><li>Refactoring the flat configuration into modules/network separates reusable network resources from the root configuration and exposes configurable inputs and outputs.</li><li>A manual VPC tag added outside Terraform creates drift that terraform plan can detect, terraform apply can reconcile, and a final terraform plan can verify as resolved.</li></ul>
 <div class="sandbox-notice">
 <span class="tag">⚠ SANDBOX ENVIRONMENT — NOT PRODUCTION</span>
-<p>This project was conducted in a controlled sandbox environment. Lab-only identifiers are shown intentionally for instructional clarity; production documentation would redact environment-specific identifiers and other sensitive operational details.</p>
+<p>This project follows the supplied training-lab workflow. Lab-only identifiers are intentionally visible for instructional clarity; production documentation would redact environment-specific operational details.</p>
 </div>
 </section>
 </div>
