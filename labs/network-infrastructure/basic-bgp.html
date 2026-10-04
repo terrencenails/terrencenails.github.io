@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Configure Basic BGP — terrencenails.log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0a0f1a; --panel:#121a29; --panel-2:#0e1521; --border:#213048;
+  --copper:#d68a3c; --copper-dim:#8a5a26; --green:#6fae7f;
+  --text:#e8ecf1; --text-dim:#8b96a8; --text-faint:#4d5b70;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--ink);color:var(--text);font-family:'IBM Plex Sans',sans-serif;line-height:1.6}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:48px 48px;pointer-events:none}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:900px;margin:0 auto;padding:0 24px;position:relative}
+nav{border-bottom:1px solid var(--border);background:rgba(10,15,26,.9)}
+nav .wrap{height:56px;display:flex;align-items:center;justify-content:space-between}
+.back{font-family:'IBM Plex Mono',monospace;font-size:.8rem;color:var(--text-dim)}
+.back:hover{color:var(--copper)}
+.brand{font-family:'Space Grotesk',sans-serif;font-weight:600}.brand .dot{color:var(--copper)}
+header{padding:58px 0 38px;border-bottom:1px solid var(--border)}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--copper);letter-spacing:.08em;margin-bottom:12px}
+h1{font-family:'Space Grotesk',sans-serif;font-size:2.2rem;line-height:1.1;margin-bottom:14px}
+.lead{color:var(--text-dim);max-width:720px;margin-bottom:18px}
+.tags{display:flex;flex-wrap:wrap;gap:7px}
+.tags span{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--copper);border:1px solid var(--copper-dim);padding:3px 8px;border-radius:2px}
+main{padding:46px 0 80px}
+section{margin-bottom:46px}
+.tag{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--copper);letter-spacing:.08em;margin-bottom:9px;display:block}
+h2{font-family:'Space Grotesk',sans-serif;font-size:1.35rem;margin-bottom:12px}
+p{color:var(--text-dim);margin-bottom:13px;max-width:760px}
+.video-wrap{border:1px solid var(--border);background:var(--panel);padding:14px;border-radius:3px}
+video{display:block;width:100%;max-height:70vh;background:#000;border-radius:2px}
+.callout{border-left:2px solid var(--copper);background:var(--panel-2);padding:15px 18px;border-radius:0 3px 3px 0}
+.callout p{margin:0;color:var(--text)}
+ul{padding-left:20px;color:var(--text-dim)}
+li{margin-bottom:9px}
+footer{border-top:1px solid var(--border);padding:32px 0 50px;text-align:center;color:var(--text-faint);font-family:'IBM Plex Mono',monospace;font-size:.72rem}
+</style>
+</head>
+<body>
+<nav>
+  <div class="wrap">
+    <a class="back" href="index.html">← back to Network Infrastructure</a>
+    <div class="brand">terrencenails<span class="dot">.</span>log</div>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">// NETWORK INFRASTRUCTURE / BGP</div>
+    <h1>Configure Basic BGP</h1>
+    <p class="lead">Configured eBGP between autonomous systems and iBGP inside AS 1, then verified route exchange, next-hop behavior, and end-to-end connectivity.</p>
+    <div class="tags"><span>BGP</span><span>eBGP</span><span>iBGP</span><span>Routing</span></div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+
+    <section>
+      <span class="tag">// VIDEO DEMONSTRATION</span>
+      <h2>Recorded Walkthrough</h2>
+      <p>This walkthrough covers the topology, autonomous systems, the backbone transit network, initial interface configuration, eBGP peering, iBGP peering, route advertisement, and verification.</p>
+      <div class="video-wrap">
+        <video controls preload="metadata" playsinline>
+          <source src="https://d16yg100golqar.cloudfront.net/BGP%20basic_final.mp4" type="video/mp4">
+          Your browser does not support HTML5 video.
+        </video>
+      </div>
+    </section>
+
+    <section>
+      <span class="tag">// OBJECTIVE</span>
+      <h2>What this project demonstrates</h2>
+      <ul>
+        <li>Basic BGP concepts, autonomous systems, and the difference between eBGP and iBGP.</li>
+        <li>eBGP peering between AS 1 and AS 2 across the 10.100.100.0/24 backbone/transit network.</li>
+        <li>iBGP peering between P1R1 and P1R2 inside AS 1.</li>
+        <li>BGP network advertisements and verification with <code>show ip bgp</code>, <code>show ip bgp summary</code>, and routing-table checks.</li>
+        <li>End-to-end reachability testing after BGP route exchange is established.</li>
+      </ul>
+    </section>
+
+    <section>
+      <div class="callout">
+        <p><strong>Lab note:</strong> This project was completed in a controlled training environment using documentation and lab addressing reserved for demonstration purposes.</p>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer>basic bgp project · network infrastructure</footer>
+</body>
+</html>
